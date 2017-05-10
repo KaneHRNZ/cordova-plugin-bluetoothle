@@ -1,3 +1,6 @@
+# This fork is providing Genero 4GL specific additions, look in fgldemo/ for an example.
+
+
 # Cordova Bluetooth LE Plugin
 This plugin allows you to interact with Bluetooth LE devices on Android, iOS, and partially on Windows.
 
