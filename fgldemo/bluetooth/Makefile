@@ -7,17 +7,30 @@
 # samples are accurate and suitable for your purposes. Their inclusion is
 # purely for information purposes only.
 
-#calling make without parameters simply creates an GMI executable for the simulator
-#use "make gmi.install" to install on the simulator or device depending on the TARGET
+# if GMI is not present,only the .42m .42f files are made
+# GMI only:
+# calling make without parameters simply creates a GMI .ipa for the device
+# (simulator : no bluetooth available)
+# use "make gmi.install" to install on the device
 
 BUNDLE_IDENTIFIER   = com.4js.cdvble
 APPNAME             = CDVBlue
-#TARGET              = simulator
 TARGET              = phone
 MODE                = debug
-BUILD_FGL           = yes
+BUILD_FGL           = no
 IDENTITY="(59W7RY75ZU)"
 PROVISIONING_PROFILE=/Users/leo/Library/MobileDevice/Provisioning\ Profiles/4js_wildcard
+
+MODULES  = $(patsubst %.4gl, %.42m, $(wildcard *.4gl))
+FORMS    = $(patsubst %.per, %.42f, $(wildcard *.per))
+
+%.42m: %.4gl
+	fglcomp -M $*
+
+%.42f: %.per
+	fglform -M $*
+
+all:: $(MODULES) $(FORMS)
 
 #include the generic Makefile-gmi with a lot of targets
 ifndef GMIDIR
@@ -26,6 +39,13 @@ endif
 MAKEFILE_GMI=$(shell GMIDIR="$(GMIDIR)";echo $${GMIDIR// /\\ })/lib/Makefile-gmi
 -include $(MAKEFILE_GMI)
 
-USER_EXTENSION_LIBS = $(GMIDIR)/lib/cordova/CDVBLE.a
+# temporary workaround the transition from CDV prefixed plugin lib names to
+# github lib names
 
-main.42m: $(USER_EXTENSION_LIBS) bgevents.42f detail.42f
+USER_EXTENSION_LIBS=$(shell GMIDIR="$(GMIDIR)";echo $${GMIDIR// /\\ })/lib/cordova/CDVBLE.a
+ifeq ($(wildcard $(USER_EXTENSION_LIBS)),)
+# new way
+  USER_EXTENSION_LIBS = -lcordova-plugin-bluetoothle
+endif
+
+main.42m: bgevents.42f detail.42f
