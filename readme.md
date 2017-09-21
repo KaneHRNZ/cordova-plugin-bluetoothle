@@ -111,55 +111,56 @@ Neither Android nor iOS support Bluetooth on emulators, so you'll need to test o
 
 ## Methods ##
 
-* [bluetoothle.initialize] (#initialize)
-* [bluetoothle.enable] (#enable) (Android)
-* [bluetoothle.disable] (#disable) (Android)
-* [bluetoothle.startScan] (#startscan)
-* [bluetoothle.stopScan] (#stopscan)
-* [bluetoothle.retrieveConnected] (#retrieveconnected)
-* [bluetoothle.bond] (#bond) (Android)
-* [bluetoothle.unbond] (#unbond) (Android)
-* [bluetoothle.connect] (#connect)
-* [bluetoothle.reconnect] (#reconnect)
-* [bluetoothle.disconnect] (#disconnect)
-* [bluetoothle.close] (#close)
-* [bluetoothle.discover] (#discover)
-* [bluetoothle.services] (#services) (iOS)
-* [bluetoothle.characteristics] (#characteristics) (iOS)
-* [bluetoothle.descriptors] (#descriptors)  (iOS)
-* [bluetoothle.read] (#read)
-* [bluetoothle.subscribe] (#subscribe)
-* [bluetoothle.unsubscribe] (#unsubscribe)
-* [bluetoothle.write] (#write)
-* [bluetoothle.writeQ] (#write)
-* [bluetoothle.readDescriptor] (#readdescriptor)
-* [bluetoothle.writeDescriptor] (#writedescriptor)
-* [bluetoothle.rssi] (#rssi)
-* [bluetoothle.mtu] (#mtu) (Android 5+)
-* [bluetoothle.requestConnectionPriority] (#requestconnectionpriority) (Android 5+)
-* [bluetoothle.isInitialized] (#isinitialized)
-* [bluetoothle.isEnabled] (#isenabled)
-* [bluetoothle.isScanning] (#isscanning)
-* [bluetoothle.isBonded] (#isbonded) (Android)
-* [bluetoothle.wasConnected] (#wasconnected)
-* [bluetoothle.isConnected] (#isconnected)
-* [bluetoothle.isDiscovered] (#isdiscovered)
-* [bluetoothle.hasPermission] (#haspermission) (Android 6+)
-* [bluetoothle.requestPermission] (#requestpermission) (Android 6+)
-* [bluetoothle.isLocationEnabled] (#islocationenabled) (Android 6+)
-* [bluetoothle.requestLocation] (#requestlocation) (Android 6+)
-* [bluetoothle.initializePeripheral] (#initializeperipheral)
-* [bluetoothle.addService] (#addservice)
-* [bluetoothle.removeService] (#removeservice)
-* [bluetoothle.removeAllServices] (#removeallservices)
-* [bluetoothle.startAdvertising] (#startadvertising)
-* [bluetoothle.stopAdvertising] (#stopadvertising)
-* [bluetoothle.respond] (#respond)
-* [bluetoothle.notify] (#notify)
-* [bluetoothle.encodedStringToBytes] (#encodedstringtobytes)
-* [bluetoothle.bytesToEncodedString] (#bytestoencodedstring)
-* [bluetoothle.stringToBytes] (#stringtobytes)
-* [bluetoothle.bytesToString] (#bytestostring)
+* [bluetoothle.initialize](#initialize)
+* [bluetoothle.enable](#enable) (Android)
+* [bluetoothle.disable](#disable) (Android)
+* [bluetoothle.getAdapterInfo](#getAdapterInfo) (Android)
+* [bluetoothle.startScan](#startscan)
+* [bluetoothle.stopScan](#stopscan)
+* [bluetoothle.retrieveConnected](#retrieveconnected)
+* [bluetoothle.bond](#bond) (Android)
+* [bluetoothle.unbond](#unbond) (Android)
+* [bluetoothle.connect](#connect)
+* [bluetoothle.reconnect](#reconnect)
+* [bluetoothle.disconnect](#disconnect)
+* [bluetoothle.close](#close)
+* [bluetoothle.discover](#discover)
+* [bluetoothle.services](#services) (iOS)
+* [bluetoothle.characteristics](#characteristics) (iOS)
+* [bluetoothle.descriptors](#descriptors)  (iOS)
+* [bluetoothle.read](#read)
+* [bluetoothle.subscribe](#subscribe)
+* [bluetoothle.unsubscribe](#unsubscribe)
+* [bluetoothle.write](#write)
+* [bluetoothle.writeQ](#write)
+* [bluetoothle.readDescriptor](#readdescriptor)
+* [bluetoothle.writeDescriptor](#writedescriptor)
+* [bluetoothle.rssi](#rssi)
+* [bluetoothle.mtu](#mtu) (Android 5+)
+* [bluetoothle.requestConnectionPriority](#requestconnectionpriority) (Android 5+)
+* [bluetoothle.isInitialized](#isinitialized)
+* [bluetoothle.isEnabled](#isenabled)
+* [bluetoothle.isScanning](#isscanning)
+* [bluetoothle.isBonded](#isbonded) (Android)
+* [bluetoothle.wasConnected](#wasconnected)
+* [bluetoothle.isConnected](#isconnected)
+* [bluetoothle.isDiscovered](#isdiscovered)
+* [bluetoothle.hasPermission](#haspermission) (Android 6+)
+* [bluetoothle.requestPermission](#requestpermission) (Android 6+)
+* [bluetoothle.isLocationEnabled](#islocationenabled) (Android 6+)
+* [bluetoothle.requestLocation](#requestlocation) (Android 6+)
+* [bluetoothle.initializePeripheral](#initializeperipheral)
+* [bluetoothle.addService](#addservice)
+* [bluetoothle.removeService](#removeservice)
+* [bluetoothle.removeAllServices](#removeallservices)
+* [bluetoothle.startAdvertising](#startadvertising)
+* [bluetoothle.stopAdvertising](#stopadvertising)
+* [bluetoothle.respond](#respond)
+* [bluetoothle.notify](#notify)
+* [bluetoothle.encodedStringToBytes](#encodedstringtobytes)
+* [bluetoothle.bytesToEncodedString](#bytestoencodedstring)
+* [bluetoothle.stringToBytes](#stringtobytes)
+* [bluetoothle.bytesToString](#bytestostring)
 
 
 
@@ -240,7 +241,7 @@ bluetoothle.initialize(initializeResult, params);
 
 ##### Params #####
 * request = true / false (default) - Should user be prompted to enable Bluetooth
-* statusReceiver = true (default) / false - Should change in Bluetooth status notifications be sent.
+* statusReceiver = true / false (default) - Should change in Bluetooth status notifications be sent.
 * restoreKey = A unique string to identify your app. Bluetooth Central background mode is required to use this, but background mode doesn't seem to require specifying the restoreKey.
 
 ```javascript
@@ -293,6 +294,27 @@ bluetoothle.disable(disableSuccess, disableError);
 ##### Success #####
 The successCallback isn't actually used. Listen to initialize callbacks for change in Bluetooth state. A successful disable will return an error => enable via initialize error callback.
 
+
+### getAdapterInfo ###
+Retrieve useful information such as the address, name, and various states (initialized, enabled, scanning, discoverable).
+This can be very useful when the general state of the adapter has been lost, and we would otherwise need to go through a series of callbacks to get the correct state (first initialized, then enabled, then isScanning, and so forth). 
+The result of this method allows us to take business logic decisions while avoiding a large part of the callback hell.
+
+Currently the discoverable state does not have any relevance because there is no "setDiscoverable" functionality in place.
+That may change in the future.
+
+```javascript
+bluetoothle.getAdapterInfo(successCallback);
+```
+
+##### Success #####
+The successCallback contains the following properties:
+ * name = the adapters's display name
+ * address = the adapter's address
+ * isInitialized = boolean value, true if the adapter was initialized, otherwise false
+ * isEnabled = boolean value, true if the adapter was enabled, otherwise false
+ * isScanning = boolean value, true if the adapter is currently scanning, otherwise false
+ * isDiscoverable = boolean value, true if the adapter is in discoverable mode, otherwise false (currently largely false)
 
 
 ### startScan ###

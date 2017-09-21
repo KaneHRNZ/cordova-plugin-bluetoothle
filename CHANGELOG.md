@@ -1,3 +1,13 @@
+## 4.4.2 - 2017-07-04
+- Allow Windows scanning to be restarted [\#438](https://github.com/randdusing/cordova-plugin-bluetoothle/pull/438)
+
+## 4.4.1 - 2017-06-28
+- Allow values to empty on iOS [\#435](https://github.com/randdusing/cordova-plugin-bluetoothle/pull/435)
+
+## 4.4.0 - 2017-05-30
+- Use updated device name while scanning [\#430](https://github.com/randdusing/cordova-plugin-bluetoothle/pull/430)
+- #getAdapterInfo() for Android [\#429](https://github.com/randdusing/cordova-plugin-bluetoothle/pull/429)
+
 ## 4.3.3 - 2017-04-27
 - Fix typescript typings typos
 
