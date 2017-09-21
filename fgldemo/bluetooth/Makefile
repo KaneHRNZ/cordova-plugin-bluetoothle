@@ -15,11 +15,18 @@
 
 BUNDLE_IDENTIFIER   = com.4js.cdvble
 APPNAME             = CDVBlue
-TARGET              = phone
+DEVICE              = phone
 MODE                = debug
 BUILD_FGL           = no
 IDENTITY="(59W7RY75ZU)"
 PROVISIONING_PROFILE=/Users/leo/Library/MobileDevice/Provisioning\ Profiles/4js_wildcard
+
+PLUGIN=cordova-plugin-bluetoothle
+# in case you build the demo when having the plugin checked out of github 
+# then we use the native code from this repository
+ifneq ($(wildcard ../../fgldemo),)
+  PLUGIN=../..
+endif
 
 MODULES  = $(patsubst %.4gl, %.42m, $(wildcard *.4gl))
 FORMS    = $(patsubst %.per, %.42f, $(wildcard *.per))
@@ -32,20 +39,16 @@ FORMS    = $(patsubst %.per, %.42f, $(wildcard *.per))
 
 all:: $(MODULES) $(FORMS)
 
-#include the generic Makefile-gmi with a lot of targets
-ifndef GMIDIR
-GMIDIR=$(FGLDIR)
-endif
-MAKEFILE_GMI=$(shell GMIDIR="$(GMIDIR)";echo $${GMIDIR// /\\ })/lib/Makefile-gmi
--include $(MAKEFILE_GMI)
-
-# temporary workaround the transition from CDV prefixed plugin lib names to
-# github lib names
-
-USER_EXTENSION_LIBS=$(shell GMIDIR="$(GMIDIR)";echo $${GMIDIR// /\\ })/lib/cordova/CDVBLE.a
-ifeq ($(wildcard $(USER_EXTENSION_LIBS)),)
-# new way
-  USER_EXTENSION_LIBS = -lcordova-plugin-bluetoothle
-endif
 
 main.42m: bgevents.42f detail.42f
+
+run: main.42m
+	fglrun main
+
+gmi.install: all
+	gmibuildtool --app-name=$(APPNAME) --bundle-id=$(BUNDLE_IDENTIFIER) --provisioning=$(PROVISIONING_PROFILE) --certificate=$(IDENTITY) --device=$(DEVICE) --mode=$(MODE) --install=yes --build-cordova=$(PLUGIN)
+
+clean::
+	rm -f *.sch *.dbs *.42*
+	rm -rf build bin distbin
+	rm -f cordovamap.txt gmi/*.a gmi/link_flags.sh *.4pwvs *.4pwdb
