@@ -2,7 +2,7 @@
 # (c) Copyright Four Js 2017, 2017. All Rights Reserved.
 # * Trademark of Four Js Development Tools Europe Ltd
 #   in the United States and elsewhere
-# 
+#
 # Four Js and its suppliers do not warrant or guarantee that these
 # samples are accurate and suitable for your purposes. Their inclusion is
 # purely for information purposes only.
@@ -32,19 +32,44 @@ MAIN
       --hide our background event action
       CALL DIALOG.setActionHidden("cordovacallback",1)
 
-    ON ACTION init ATTRIBUTES(TEXT="Init BLE")
+    ON ACTION init ATTRIBUTES(TEXT="Central Init")
       LET initOptions.request=TRUE
       LET initOptions.restoreKey="yyy"
-      CALL ui.interface.frontcall("cordova", "callWithoutWaiting", 
+      CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
               ["BluetoothLePlugin","initialize",initOptions], [callbackId])
+      DISPLAY callbackId
 
-    ON ACTION initP ATTRIBUTES(TEXT="Init Peripherals")
+    ON ACTION initP ATTRIBUTES(TEXT="Peripheral Init")
       LET initOptions.request=TRUE
       LET initOptions.restoreKey="xxx"
-      CALL ui.interface.frontcall("cordova", "callWithoutWaiting", 
+      CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
               ["BluetoothLePlugin","initializePeripheral",initOptions]
               , [callbackId])
-      MESSAGE callbackId
+      DISPLAY callbackId
+
+    ON ACTION isInit ATTRIBUTES(TEXT="Is Initialized?")
+      CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
+              ["BluetoothLePlugin","isInitialized"]
+              , [callbackId])
+      DISPLAY callbackId
+
+    ON ACTION enable ATTRIBUTES(TEXT="Enable (Android)")
+      CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
+              ["BluetoothLePlugin","enable"]
+              , [callbackId])
+      DISPLAY callbackId
+
+    ON ACTION disable ATTRIBUTES(TEXT="Disable (Android)")
+      CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
+              ["BluetoothLePlugin","disable"]
+              , [callbackId])
+      DISPLAY callbackId
+
+    ON ACTION isenabled ATTRIBUTES(TEXT="Is Enabled? (Android)")
+      CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
+              ["BluetoothLePlugin","isEnabled"]
+              , [callbackId])
+      DISPLAY callbackId
 
     ON ACTION startscan ATTRIBUTE(TEXT="Start Scan")
       IF getClientName() == "GMA" THEN
@@ -55,18 +80,18 @@ MAIN
 
         IF hasCoarseLocationPermission() THEN
           CALL ui.interface.frontcall("cordova", "callWithoutWaiting", ["BluetoothLePlugin","startScan"],[callbackId])
-          MESSAGE callbackId
+          DISPLAY callbackId
         ELSE
           ERROR "Cannot start scan: permission not granted"
         END IF
       ELSE
         CALL ui.interface.frontcall("cordova", "callWithoutWaiting", ["BluetoothLePlugin","startScan"],[callbackId])
-        MESSAGE callbackId
+        DISPLAY callbackId
       END IF
 
     ON ACTION stopscan ATTRIBUTE(TEXT="Stop Scan")
       CALL ui.interface.frontcall("cordova", "callWithoutWaiting", ["BluetoothLePlugin","stopScan"],[callbackId])
-      MESSAGE callbackId
+      DISPLAY callbackId
 
     ON ACTION cordovacallback --the cdv frontcall pushes this action into the dialog
        --we ask in a loop for the results accumulated at the native side
@@ -77,7 +102,7 @@ MAIN
           LET bgEvents[idx].callbackId=callbackId
           LET bgEvents[idx].result=result
        END WHILE
-       ERROR sfmt("ON ACTION cordovacallback count:%1,cbIds:%2,result",idx,callBackId,result)
+       MESSAGE sfmt("ON ACTION cordovacallback count:%1,cbIds:%2,result",idx,callBackId,result)
 
     ON ACTION showevents ATTRIBUTES(TEXT="Show Background events")
        CALL showBgEvents()
@@ -98,16 +123,16 @@ FUNCTION showBgEvents()
   DEFINE result STRING
   OPEN WINDOW bgEvents WITH FORM "bgevents"
   DISPLAY ARRAY bgEvents TO scr.* ATTRIBUTE(DOUBLECLICK=select)
-     ON ACTION select 
+     ON ACTION select
        OPEN WINDOW detail WITH FORM "detail"
        DISPLAY bgEvents[arr_curr()].callbackId TO callbackId
-       LET result=bgEvents[arr_curr()].result 
+       LET result=bgEvents[arr_curr()].result
        IF result.getLength()>1000 THEN
          LET result=result.subString(1,1000)
        END IF
        DISPLAY result TO info
        --ERROR bgEvents[arr_curr()].result
-       MENU 
+       MENU
          ON ACTION close
            EXIT MENU
        END MENU
