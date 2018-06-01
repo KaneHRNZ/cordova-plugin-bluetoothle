@@ -11,6 +11,12 @@ IMPORT util
 IMPORT FGL fgldialog
 IMPORT FGL fglcdvBluetoothLE
 
+PRIVATE DEFINE inforec RECORD
+               initStatusStr STRING,
+               scanStatusStr STRING,
+               message STRING,
+               evtinfo STRING
+           END RECORD
 
 --we just check if we can call some of the core functions
 --in this plugin (scanning the neighbourhood)
@@ -21,10 +27,13 @@ MAIN
 
     CALL fglcdvBluetoothLE.init()
 
-    MENU "Cordova Bluetooth Demo"
+    OPEN FORM f1 FROM "main"
+    DISPLAY FORM f1
 
-    BEFORE MENU
-      CALL DIALOG.setActionHidden("cordovacallback",1) -- GMI bug ignoring ATTRIBUTES(DEFAULTVIEW=NO)?
+    INPUT BY NAME inforec.* WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE)
+
+    BEFORE INPUT
+      --for CALL DIALOG.setActionHidden("cordovacallback",1) -- GMI bug ignoring ATTRIBUTES(DEFAULTVIEW=NO)?
 {
       IF fen == "GMI" THEN
          CALL DIALOG.setActionHidden("enable",1)
@@ -43,9 +52,6 @@ MAIN
     ON IDLE 1
       CALL setup_dialog(DIALOG)
 
-    ON ACTION exit ATTRIBUTES(TEXT="Exit")
-       EXIT MENU
-
     ON ACTION initialize ATTRIBUTES(TEXT="Initialize")
        LET fglcdvBluetoothLE.initOptions.request=TRUE
        LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
@@ -56,34 +62,31 @@ MAIN
        END MENU
        IF m != -1 THEN
           IF fglcdvBluetoothLE.initialize(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN
-             MESSAGE "BluetoothLE initialization started."
+             LET inforec.message = "BluetoothLE initialization started."
           ELSE
              ERROR "BluetoothLE initialization start has failed."
           END IF
        END IF
 
-    ON ACTION initstatus ATTRIBUTES(TEXT="Show init status")
-       CASE fglcdvBluetoothLE.getInitializationStatus()
-       WHEN fglcdvBluetoothLE.INIT_STATUS_NOT_ENABLED
-           MESSAGE "Init status: NOT ENABLED"
-       WHEN fglcdvBluetoothLE.INIT_STATUS_IN_PROGRESS
-           MESSAGE "Init status: IN PROGRESS"
-       WHEN fglcdvBluetoothLE.INIT_STATUS_ENABLED
-           MESSAGE "Init status: ENABLED"
-       WHEN fglcdvBluetoothLE.INIT_STATUS_FAILED
-           MESSAGE "Init status: FAILED"
-       END CASE
-
-    ON ACTION isinitialized ATTRIBUTES(TEXT="Is intialized?")
-       MESSAGE SFMT("Initialized: %1", fglcdvBluetoothLE.isInitialized())
+    ON ACTION queryinfo ATTRIBUTES(TEXT="Query info")
+       OPEN WINDOW w_query AT 1,1 WITH 20 ROWS, 50 COLUMNS
+       MENU "Query info"-- ATTRIBUTES(STYLE="popup")
+       ON ACTION isinitialized ATTRIBUTES(TEXT="Is intialized?")
+           MESSAGE SFMT("Initialized: %1", fglcdvBluetoothLE.isInitialized())
+       ON ACTION isscanning ATTRIBUTES(TEXT="Is Scanning?")
+           MESSAGE SFMT("Scanning: %1", fglcdvBluetoothLE.isScanning())
+       --ON ACTION isenabled ATTRIBUTES(TEXT="Is enabled? (Android)")
+       --    MESSAGE SFMT("Enabled: %1", fglcdvBluetoothLE.isEnabled())
+       ON ACTION cancel ATTRIBUTES(TEXT="Exit")
+           EXIT MENU
+       END MENU
+       CLOSE WINDOW w_query
 
 {
     ON ACTION enable ATTRIBUTES(TEXT="Enable (Android)")
-       MESSAGE SFMT("Enable: %1", fglcdvBluetoothLE.enable())
+       LET inforec.message = SFMT("Enable: %1", fglcdvBluetoothLE.enable())
     ON ACTION disable ATTRIBUTES(TEXT="Disable (Android)")
-       MESSAGE SFMT("Disable: %1", fglcdvBluetoothLE.disable())
-    ON ACTION isenabled ATTRIBUTES(TEXT="Is enabled? (Android)")
-       MESSAGE SFMT("Enabled: %1", fglcdvBluetoothLE.isEnabled())
+       LET inforec.message = SFMT("Disable: %1", fglcdvBluetoothLE.disable())
 }
 
     ON ACTION startscan ATTRIBUTES(TEXT="Start Scan")
@@ -99,48 +102,59 @@ MAIN
        --LET fglcdvBluetoothLE.scanOptions.services[1] = "180D"
        --LET fglcdvBluetoothLE.scanOptions.services[2] = "180F"
        IF fglcdvBluetoothLE.startScan( fglcdvBluetoothLE.scanOptions.* ) >= 0 THEN
-          MESSAGE "BluetoothLE scan started."
+          LET inforec.message = "BluetoothLE scan started."
           CALL showBgEvents()
        ELSE
-          MESSAGE "BluetoothLE scan failed to start."
+          ERROR "BluetoothLE scan failed to start."
        END IF
 
     ON ACTION stopscan ATTRIBUTES(TEXT="Stop Scan")
        IF fglcdvBluetoothLE.stopScan() >= 0 THEN
-          MESSAGE "BluetoothLE scan stopped."
+          LET inforec.message = "BluetoothLE scan stopped."
        ELSE
           ERROR "BluetoothLE scan stop failed."
        END IF
 
-    ON ACTION isscanning ATTRIBUTES(TEXT="Is scanning?")
-       MESSAGE SFMT("Scanning: %1", fglcdvBluetoothLE.isScanning())
-
     ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
        LET cnt = fglcdvBluetoothLE.processCallbackEvents()
        IF cnt >= 0 THEN
-          MESSAGE SFMT(" %1: cordovacallback action : %2 events processed ",
+          LET inforec.evtinfo = SFMT(" %1: cordovacallback action : %2 events processed ",
                        CURRENT HOUR TO FRACTION(3), cnt )
        ELSE
-          MESSAGE SFMT(" %1: cordovacallback action : error %2 while processing callback results.",
+          LET inforec.evtinfo = SFMT(" %1: cordovacallback action : error %2 while processing callback results.",
                        CURRENT HOUR TO FRACTION(3), cnt )
        END IF
 
     ON ACTION showevents ATTRIBUTES(TEXT="Show Background events")
        CALL showBgEvents()
 
-    END MENU
+    END INPUT
 
     CALL fglcdvBluetoothLE.fini()
 
 END MAIN
 
 PRIVATE FUNCTION setup_dialog(d ui.Dialog)
---display "canInitialize            : ", fglcdvBluetoothLE.canInitialize()
+    DEFINE tmp STRING
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
---display "canStartScan             : ", fglcdvBluetoothLE.canStartScan()
     CALL d.setActionActive("startscan",  fglcdvBluetoothLE.canStartScan())
---display "canStopScan              : ", fglcdvBluetoothLE.canStopScan()
     CALL d.setActionActive("stopscan",   fglcdvBluetoothLE.canStopScan())
+    LET tmp = fglcdvBluetoothLE.initializationStatusToString(
+                    fglcdvBluetoothLE.getInitializationStatus() )
+    IF tmp == inforec.initStatusStr THEN
+       DISPLAY BY NAME inforec.initStatusStr
+    ELSE
+       LET inforec.initStatusStr = tmp
+       DISPLAY BY NAME inforec.initStatusStr ATTRIBUTE(RED)
+    END IF
+    LET tmp = fglcdvBluetoothLE.scanStatusToString(
+                    fglcdvBluetoothLE.getScanStatus())
+    IF tmp == inforec.scanStatusStr THEN
+       DISPLAY BY NAME inforec.scanStatusStr
+    ELSE
+       LET inforec.scanStatusStr = tmp
+       DISPLAY BY NAME inforec.scanStatusStr ATTRIBUTE(RED)
+    END IF
 END FUNCTION
 
 PRIVATE FUNCTION showBgEvents()

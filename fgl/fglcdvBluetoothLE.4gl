@@ -29,7 +29,7 @@ PUBLIC DEFINE initOptions InitOptionsT
 PUBLIC CONSTANT INIT_MODE_CENTRAL    = 1
 PUBLIC CONSTANT INIT_MODE_PERIPHERAL = 2
 
-PUBLIC CONSTANT INIT_STATUS_NOT_ENABLED = 0
+PUBLIC CONSTANT INIT_STATUS_DISABLED    = 0
 PUBLIC CONSTANT INIT_STATUS_IN_PROGRESS = 1
 PUBLIC CONSTANT INIT_STATUS_ENABLED     = 2
 PUBLIC CONSTANT INIT_STATUS_FAILED      = 3
@@ -107,7 +107,7 @@ PUBLIC FUNCTION init()
     LET scanOptions.matchNum = MATCH_NUM_ONE_ADVERTISEMENT
     LET scanOptions.callbackType = CALLBACK_TYPE_ALL_MATCHES
 
-    LET initStatus = INIT_STATUS_NOT_ENABLED -- BLE init status
+    LET initStatus = INIT_STATUS_DISABLED -- BLE init status
     LET scanStatus = SCAN_STATUS_NOT_READY
 
     LET initialized = TRUE -- Lib init status
@@ -136,7 +136,7 @@ PRIVATE FUNCTION check_lib_state(mode SMALLINT)
         CALL fatalError("Library is not initialized.")
     END IF
     IF mode >= 1 THEN
-        IF callbackIdInitialize IS NULL THEN
+        IF initStatus == INIT_STATUS_ENABLED IS NULL THEN
             CALL fatalError("BluetoothLE is not initialized.")
         END IF
     END IF
@@ -230,7 +230,7 @@ END FUNCTION
 
 PUBLIC FUNCTION canInitialize()
     CALL check_lib_state(0)
-    RETURN (initStatus == INIT_STATUS_NOT_ENABLED
+    RETURN (initStatus == INIT_STATUS_DISABLED
          OR initStatus == INIT_STATUS_FAILED)
 END FUNCTION
 
@@ -241,13 +241,14 @@ END FUNCTION
 #+
 #+ @return 0 on success, <0 if error.
 PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS INTEGER
+--define result string
     CALL check_lib_state(0)
     CALL bgEvents.clear()
     LET scanResultsOffset = 1
     IF callbackIdInitialize IS NOT NULL THEN
         RETURN -2
     END IF
-    IF initStatus != INIT_STATUS_NOT_ENABLED THEN
+    IF initStatus != INIT_STATUS_DISABLED THEN
         RETURN -3
     END IF
     TRY
@@ -257,6 +258,16 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
              IIF(initMode==INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
              initOptions],
             [callbackIdInitialize])
+{ FIXME?
+        CALL ui.interface.frontcall("cordova", "call",
+            ["BluetoothLePlugin",
+             IIF(initMode==INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
+             initOptions],
+            [result])
+display "initialize result: ", result
+        LET initStatus = INIT_STATUS_ENABLED
+        LET scanStatus = SCAN_STATUS_READY
+}
     CATCH
         RETURN -1
     END TRY
@@ -265,6 +276,16 @@ END FUNCTION
 
 PUBLIC FUNCTION getInitializationStatus() RETURNS SMALLINT
     RETURN initStatus
+END FUNCTION
+
+PUBLIC FUNCTION initializationStatusToString(initStatus SMALLINT) RETURNS STRING
+    CASE initStatus
+    WHEN INIT_STATUS_DISABLED    RETURN "Disabled"
+    WHEN INIT_STATUS_IN_PROGRESS RETURN "In progress"
+    WHEN INIT_STATUS_ENABLED     RETURN "Enabled"
+    WHEN INIT_STATUS_FAILED      RETURN "Failed"
+    OTHERWISE RETURN NULL
+    END CASE
 END FUNCTION
 
 PRIVATE FUNCTION _syncCallP1RS(funcname STRING, resinfo STRING) RETURNS (SMALLINT, STRING)
@@ -393,6 +414,19 @@ END FUNCTION
 
 PUBLIC FUNCTION getScanStatus() RETURNS SMALLINT
     RETURN scanStatus
+END FUNCTION
+
+PUBLIC FUNCTION scanStatusToString(scanStatus SMALLINT) RETURNS STRING
+    CASE scanStatus
+    WHEN SCAN_STATUS_NOT_READY RETURN "Not ready"
+    WHEN SCAN_STATUS_READY     RETURN "Ready"
+    WHEN SCAN_STATUS_STARTING  RETURN "Starting"
+    WHEN SCAN_STATUS_STARTED   RETURN "Started"
+    WHEN SCAN_STATUS_STOPPED   RETURN "Stopped"
+    WHEN SCAN_STATUS_FAILED    RETURN "Failed"
+    WHEN SCAN_STATUS_RESULT    RETURN "Result"
+    OTHERWISE RETURN NULL
+    END CASE
 END FUNCTION
 
 ---
