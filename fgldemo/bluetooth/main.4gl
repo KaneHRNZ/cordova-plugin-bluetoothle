@@ -15,14 +15,15 @@ IMPORT FGL fglcdvBluetoothLE
 --we just check if we can call some of the core functions
 --in this plugin (scanning the neighbourhood)
 MAIN
-    DEFINE fen STRING, cnt INT
+    DEFINE fen STRING, cnt, m INT
+
+    LET fen = getFrontEndName()
 
     CALL fglcdvBluetoothLE.init()
 
     MENU "Cordova Bluetooth Demo"
 
     BEFORE MENU
-      LET fen = getFrontEndName()
       CALL DIALOG.setActionHidden("cordovacallback",1) -- GMI bug ignoring ATTRIBUTES(DEFAULTVIEW=NO)?
 {
       IF fen == "GMI" THEN
@@ -31,29 +32,47 @@ MAIN
          CALL DIALOG.setActionHidden("isenabled",1)
       END IF
 }
+      CALL setup_dialog(DIALOG)
+
+    -- BLD Cordova callback events can happen asynchroneously even for basic
+    -- functions such as initialization, and connecting to a peer.
+    -- Therefore, we need to query BLE statuses from time to time, to see
+    -- where we are, and setup the possible actions.
+    -- We use functions of the BluetoothLE library, using local statuses to
+    -- avoid a Cordova front call like "isInitialized".
+    ON IDLE 1
+      CALL setup_dialog(DIALOG)
 
     ON ACTION exit ATTRIBUTES(TEXT="Exit")
        EXIT MENU
 
-    ON ACTION initcentral ATTRIBUTES(TEXT="Central Init")
+    ON ACTION initialize ATTRIBUTES(TEXT="Initialize")
        LET fglcdvBluetoothLE.initOptions.request=TRUE
-       LET fglcdvBluetoothLE.initOptions.restoreKey="yyy"
-       IF fglcdvBluetoothLE.initialize(fglcdvBluetoothLE.INIT_CENTRAL,
-                                       fglcdvBluetoothLE.initOptions.*) >= 0 THEN
-          MESSAGE "BluetoothLE central initialization done."
-       ELSE
-          ERROR "BluetoothLE central initialization has failed."
+       LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
+       MENU "Initialization" ATTRIBUTES(STYLE="popup")
+           COMMAND "Central"     LET m = fglcdvBluetoothLE.INIT_MODE_CENTRAL
+           COMMAND "Peripheral"  LET m = fglcdvBluetoothLE.INIT_MODE_PERIPHERAL
+           COMMAND "Cancel"      LET m = -1
+       END MENU
+       IF m != -1 THEN
+          IF fglcdvBluetoothLE.initialize(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN
+             MESSAGE "BluetoothLE initialization started."
+          ELSE
+             ERROR "BluetoothLE initialization start has failed."
+          END IF
        END IF
 
-    ON ACTION initperiph ATTRIBUTES(TEXT="Peripheral Init")
-      LET fglcdvBluetoothLE.initOptions.request=TRUE
-      LET fglcdvBluetoothLE.initOptions.restoreKey="xxx"
-       IF fglcdvBluetoothLE.initialize(fglcdvBluetoothLE.INIT_PERIPHERAL,
-                                       fglcdvBluetoothLE.initOptions.*) >= 0 THEN
-          MESSAGE "BluetoothLE peripheral initialization done."
-       ELSE
-          ERROR "BluetoothLE peripheral initialization has failed."
-       END IF
+    ON ACTION initstatus ATTRIBUTES(TEXT="Show init status")
+       CASE fglcdvBluetoothLE.getInitializationStatus()
+       WHEN fglcdvBluetoothLE.INIT_STATUS_NOT_ENABLED
+           MESSAGE "Init status: NOT ENABLED"
+       WHEN fglcdvBluetoothLE.INIT_STATUS_IN_PROGRESS
+           MESSAGE "Init status: IN PROGRESS"
+       WHEN fglcdvBluetoothLE.INIT_STATUS_ENABLED
+           MESSAGE "Init status: ENABLED"
+       WHEN fglcdvBluetoothLE.INIT_STATUS_FAILED
+           MESSAGE "Init status: FAILED"
+       END CASE
 
     ON ACTION isinitialized ATTRIBUTES(TEXT="Is intialized?")
        MESSAGE SFMT("Initialized: %1", fglcdvBluetoothLE.isInitialized())
@@ -109,12 +128,20 @@ MAIN
     ON ACTION showevents ATTRIBUTES(TEXT="Show Background events")
        CALL showBgEvents()
 
-
     END MENU
 
     CALL fglcdvBluetoothLE.fini()
 
 END MAIN
+
+PRIVATE FUNCTION setup_dialog(d ui.Dialog)
+--display "canInitialize            : ", fglcdvBluetoothLE.canInitialize()
+    CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
+--display "canStartScan             : ", fglcdvBluetoothLE.canStartScan()
+    CALL d.setActionActive("startscan",  fglcdvBluetoothLE.canStartScan())
+--display "canStopScan              : ", fglcdvBluetoothLE.canStopScan()
+    CALL d.setActionActive("stopscan",   fglcdvBluetoothLE.canStopScan())
+END FUNCTION
 
 PRIVATE FUNCTION showBgEvents()
   DEFINE bgEvents fglcdvBluetoothLE.BgEventArrayT
@@ -128,8 +155,11 @@ PRIVATE FUNCTION showBgEvents()
        CALL DIALOG.deleteAllRows("scr")
      ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
        LET cnt = fglcdvBluetoothLE.processCallbackEvents()
+display "DA cordocacallback! fetched events = ", cnt
        CALL fglcdvBluetoothLE.getCallbackData( bgEvents )
-       CALL DIALOG.setCurrentRow("scr",DIALOG.getArrayLength("scr"))
+display "DA getCallbackData: total events   = ", bgEvents.getLength()
+       CALL DIALOG.setCurrentRow("scr", bgEvents.getLength())
+display "DA new row: ", DIALOG.getArrayLength("scr")
      ON ACTION select
        OPEN WINDOW detail WITH FORM "detail"
        DISPLAY bgEvents[arr_curr()].callbackId TO callbackId

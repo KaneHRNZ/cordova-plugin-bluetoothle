@@ -26,16 +26,29 @@ PUBLIC TYPE InitOptionsT RECORD
 END RECORD
 PUBLIC DEFINE initOptions InitOptionsT
 
-PUBLIC CONSTANT INIT_CENTRAL = 1
-PUBLIC CONSTANT INIT_PERIPHERAL = 2
+PUBLIC CONSTANT INIT_MODE_CENTRAL    = 1
+PUBLIC CONSTANT INIT_MODE_PERIPHERAL = 2
+
+PUBLIC CONSTANT INIT_STATUS_NOT_ENABLED = 0
+PUBLIC CONSTANT INIT_STATUS_IN_PROGRESS = 1
+PUBLIC CONSTANT INIT_STATUS_ENABLED     = 2
+PUBLIC CONSTANT INIT_STATUS_FAILED      = 3
+
+PUBLIC CONSTANT SCAN_STATUS_NOT_READY = 0
+PUBLIC CONSTANT SCAN_STATUS_READY     = 1
+PUBLIC CONSTANT SCAN_STATUS_STARTING  = 2
+PUBLIC CONSTANT SCAN_STATUS_STARTED   = 3
+PUBLIC CONSTANT SCAN_STATUS_STOPPED   = 4
+PUBLIC CONSTANT SCAN_STATUS_FAILED    = 5
+PUBLIC CONSTANT SCAN_STATUS_RESULT    = 6
 
 PUBLIC CONSTANT SCAN_MODE_OPPORTUNISTIC = -1
-PUBLIC CONSTANT SCAN_MODE_LOW_POWER = 0
-PUBLIC CONSTANT SCAN_MODE_BALANCED = 1
-PUBLIC CONSTANT SCAN_MODE_LOW_LATENCY = 2
+PUBLIC CONSTANT SCAN_MODE_LOW_POWER     = 0
+PUBLIC CONSTANT SCAN_MODE_BALANCED      = 1
+PUBLIC CONSTANT SCAN_MODE_LOW_LATENCY   = 2
 
 PUBLIC CONSTANT MATCH_MODE_AGRESSIVE = 1
-PUBLIC CONSTANT MATCH_MODE_STICKY = 2
+PUBLIC CONSTANT MATCH_MODE_STICKY    = 2
 
 PUBLIC CONSTANT MATCH_NUM_ONE_ADVERTISEMENT = 1
 PUBLIC CONSTANT MATCH_NUM_FEW_ADVERTISEMENT = 2
@@ -43,7 +56,7 @@ PUBLIC CONSTANT MATCH_NUM_MAX_ADVERTISEMENT = 3
 
 PUBLIC CONSTANT CALLBACK_TYPE_ALL_MATCHES = 1
 PUBLIC CONSTANT CALLBACK_TYPE_FIRST_MATCH = 2
-PUBLIC CONSTANT CALLBACK_TYPE_MATCH_LOST = 4
+PUBLIC CONSTANT CALLBACK_TYPE_MATCH_LOST  = 4
 
 PUBLIC TYPE ScanOptionsT RECORD
   services DYNAMIC ARRAY OF STRING,
@@ -59,12 +72,17 @@ PUBLIC DEFINE scanOptions ScanOptionsT
 
 PRIVATE CONSTANT BLUETOOTHLEPLUGIN = "BluetoothLePlugin"
 
-PRIVATE DEFINE initialized BOOLEAN
+PRIVATE DEFINE initialized BOOLEAN -- Library initialization status
 PRIVATE DEFINE frontEndName STRING
 
+PRIVATE DEFINE initStatus SMALLINT -- BluetoothLE initialization status
+PRIVATE DEFINE scanStatus SMALLINT
 PRIVATE DEFINE callbackIdInitialize STRING
-PRIVATE DEFINE callbackIdInitializePeripheral STRING
 PRIVATE DEFINE callbackIdStartScan STRING
+
+PRIVATE DEFINE scanResultsOffset INTEGER
+
+PRIVATE DEFINE ts DATETIME HOUR TO FRACTION(5)
 
 #+ Initializes the plugin library
 #+
@@ -89,7 +107,11 @@ PUBLIC FUNCTION init()
     LET scanOptions.matchNum = MATCH_NUM_ONE_ADVERTISEMENT
     LET scanOptions.callbackType = CALLBACK_TYPE_ALL_MATCHES
 
-    LET initialized = TRUE
+    LET initStatus = INIT_STATUS_NOT_ENABLED -- BLE init status
+    LET scanStatus = SCAN_STATUS_NOT_READY
+
+    LET initialized = TRUE -- Lib init status
+
 END FUNCTION
 
 #+ Finalizes the plugin library
@@ -117,11 +139,6 @@ PRIVATE FUNCTION check_lib_state(mode SMALLINT)
         IF callbackIdInitialize IS NULL THEN
             CALL fatalError("BluetoothLE is not initialized.")
         END IF
-        IF mode >= 2 THEN
-            IF callbackIdInitializePeripheral IS NULL THEN
-                CALL fatalError("BluetoothLE peripheral is not initialized.")
-            END IF
-        END IF
     END IF
 END FUNCTION
 
@@ -138,10 +155,19 @@ PRIVATE FUNCTION getFrontEndName()
     RETURN frontEndName
 END FUNCTION
 
+PRIVATE FUNCTION ts_init()
+    LET ts = CURRENT HOUR TO FRACTION(5)
+END FUNCTION
+PRIVATE FUNCTION ts_diff()
+    RETURN (CURRENT HOUR TO FRACTION(5) - ts)
+END FUNCTION
+
 PRIVATE FUNCTION getCallbackDataCount()
     DEFINE cnt INTEGER
     TRY
+call ts_init()
         CALL ui.interface.frontcall("cordova","getCallbackDataCount",[],[cnt])
+display "getCallbackDataCount   : ", ts_diff()
     CATCH
         RETURN -1
     END TRY
@@ -150,69 +176,95 @@ END FUNCTION
 
 #+ Processes BluetoothLE Cordova plugin callback events
 #+
-#+ 
+#+
 #+
 #+ @return <0 if error. Otherwise, the number of callback data fetched.
 PUBLIC FUNCTION processCallbackEvents()
     DEFINE result, callbackId STRING,
-           cnt, idx INTEGER
+           cnt, idx INTEGER,
+           jsonResult util.JSONObject
     WHILE getCallbackDataCount()>0
         TRY
+call ts_init()
             CALL ui.interface.frontcall("cordova","getCallbackData",[],[result,callbackId])
+display "getCallbackData        : ", ts_diff()
         CATCH
             RETURN -1
         END TRY
-          LET idx = bgEvents.getLength() + 1
-          LET bgEvents[idx].time=CURRENT
-          LET bgEvents[idx].callbackId=callbackId
-          LET bgEvents[idx].result=result
-          LET cnt = cnt + 1
+display "process result: ", callbackId, " result = ", result
+        LET idx = bgEvents.getLength() + 1
+        LET bgEvents[idx].time=CURRENT
+        LET bgEvents[idx].callbackId=callbackId
+        LET bgEvents[idx].result=result
+        LET cnt = cnt + 1
+        -- BluetoothLE initialization
+        CASE callbackId
+        WHEN callbackIdInitialize
+           LET jsonResult = util.JSONObject.parse(result)
+           IF jsonResult.get("status") == "enabled" THEN
+               LET initStatus = INIT_STATUS_ENABLED
+               LET scanStatus = SCAN_STATUS_READY
+           ELSE
+               LET initStatus = INIT_STATUS_FAILED
+               LET scanStatus = SCAN_STATUS_NOT_READY
+           END IF
+        -- Scanning
+        WHEN callbackIdStartScan
+display " scan callback!!!!!!"
+           LET jsonResult = util.JSONObject.parse(result)
+           CASE jsonResult.get("status")
+           WHEN "scanStarted" -- WARNING: Not produced on iOS!
+display "      set scanStatus to SCAN_STATUS_STARTED"
+               LET scanStatus = SCAN_STATUS_STARTED
+           WHEN "scanResult"
+display "      set scanStatus to SCAN_STATUS_RESULT"
+               LET scanStatus = SCAN_STATUS_RESULT
+           OTHERWISE
+display "      set scanStatus to SCAN_STATUS_FAILED"
+               LET scanStatus = SCAN_STATUS_FAILED
+           END CASE
+        END CASE
     END WHILE
     RETURN cnt
 END FUNCTION
 
-PUBLIC FUNCTION getCallbackData( bge BgEventArrayT )
-    CALL bgEvents.copyTo( bge )
+PUBLIC FUNCTION canInitialize()
+    CALL check_lib_state(0)
+    RETURN (initStatus == INIT_STATUS_NOT_ENABLED
+         OR initStatus == INIT_STATUS_FAILED)
 END FUNCTION
 
 #+ Initializes BLE
 #+
-#+ @param initMode INIT_CENTRAL or INIT_PERIPHERAL
+#+ @param initMode INIT_MODE_CENTRAL or INIT_MODE_PERIPHERAL
 #+ @param initOptions the initialization options of (see InitOptionsT)
 #+
 #+ @return 0 on success, <0 if error.
 PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS INTEGER
     CALL check_lib_state(0)
     CALL bgEvents.clear()
+    LET scanResultsOffset = 1
     IF callbackIdInitialize IS NOT NULL THEN
         RETURN -2
     END IF
-    IF initMode==INIT_PERIPHERAL AND callbackIdInitializePeripheral IS NOT NULL THEN
+    IF initStatus != INIT_STATUS_NOT_ENABLED THEN
         RETURN -3
     END IF
     TRY
-        -- iOS does not require initialize before initializePeripheral.
-        IF initMode==INIT_CENTRAL OR getFrontEndName()=="GMA" THEN
-            CALL ui.interface.frontcall("cordova", "callWithoutWaiting", 
-                    ["BluetoothLePlugin", "initialize", initOptions],
-                    [callbackIdInitialize])
-        END IF
-
-{ FIXME?
-            -- We process directly callback events...
-            LET cnt = processCallbackEvents()
-            IF cnt
-}
-
-        IF initMode==INIT_PERIPHERAL THEN
-            CALL ui.interface.frontcall("cordova", "callWithoutWaiting", 
-                    ["BluetoothLePlugin", "initializePeripheral", initOptions],
-                    [callbackIdInitializePeripheral])
-        END IF
+        LET initStatus = INIT_STATUS_IN_PROGRESS
+        CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
+            ["BluetoothLePlugin",
+             IIF(initMode==INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
+             initOptions],
+            [callbackIdInitialize])
     CATCH
         RETURN -1
     END TRY
     RETURN 0
+END FUNCTION
+
+PUBLIC FUNCTION getInitializationStatus() RETURNS SMALLINT
+    RETURN initStatus
 END FUNCTION
 
 PRIVATE FUNCTION _syncCallP1RS(funcname STRING, resinfo STRING) RETURNS (SMALLINT, STRING)
@@ -234,7 +286,7 @@ END FUNCTION
 PRIVATE FUNCTION _syncCallP1RB(funcname STRING, resinfo STRING) RETURNS BOOLEAN
     DEFINE r SMALLINT, v STRING
     CALL _syncCallP1RS(funcname, resinfo) RETURNING r, v
-    IF r==0 THEN 
+    IF r==0 THEN
        RETURN (v=="1")
     ELSE
        RETURN FALSE
@@ -282,7 +334,28 @@ PUBLIC FUNCTION askForCoarseLocationPermission() RETURNS BOOLEAN
     RETURN _syncCallP1RB("requestPermission",NULL)
 END FUNCTION
 
+PUBLIC FUNCTION canStartScan()
+    CALL check_lib_state(0)
+    RETURN (scanStatus == SCAN_STATUS_READY
+         OR scanStatus == SCAN_STATUS_STOPPED
+         OR scanStatus == SCAN_STATUS_FAILED)
+END FUNCTION
+
+PUBLIC FUNCTION canStopScan()
+    CALL check_lib_state(0)
+--display " scanStatus = ", scanStatus
+    RETURN (scanStatus == SCAN_STATUS_STARTED
+         OR scanStatus == SCAN_STATUS_RESULT)
+END FUNCTION
+
 PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
+    CALL check_lib_state(1)
+    IF NOT (scanStatus == SCAN_STATUS_READY
+         OR scanStatus == SCAN_STATUS_STOPPED
+         OR scanStatus == SCAN_STATUS_FAILED)
+    THEN
+        RETURN -1
+    END IF
     -- On Android we always have to ask for permission
     IF getFrontEndName() == "GMA" THEN
         IF NOT hasCoarseLocationPermission() THEN
@@ -295,6 +368,8 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
         CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN,"startScan",scanOptions],
                 [callbackIdStartScan])
+display "startScan callbackId = ", callbackIdStartScan
+        LET scanStatus = SCAN_STATUS_STARTING
     CATCH
         RETURN -1
     END TRY
@@ -304,14 +379,98 @@ END FUNCTION
 PUBLIC FUNCTION stopScan() RETURNS INTEGER
     DEFINE r SMALLINT, v STRING
     CALL check_lib_state(1)
+    IF NOT canStopScan() THEN
+        RETURN -1
+    END IF
     CALL _syncCallP1RS("stopScan","status") RETURNING r, v
     IF r==0 AND v=="scanStopped" THEN
+       LET scanStatus = SCAN_STATUS_STOPPED
        RETURN 0
     ELSE
        RETURN -1
     END IF
 END FUNCTION
 
+PUBLIC FUNCTION getScanStatus() RETURNS SMALLINT
+    RETURN scanStatus
+END FUNCTION
+
+---
+
+PUBLIC FUNCTION getCallbackData( bge BgEventArrayT )
+    CALL bgEvents.copyTo( bge )
+END FUNCTION
+
+#+ Get all scan result events since initialization
+PUBLIC FUNCTION getAllScanResults( bge BgEventArrayT )
+    DEFINE i, x, len INTEGER
+    DEFINE jsonResult util.JSONObject
+    CALL bge.clear()
+    LET len = bgEvents.getLength()
+    FOR i=1 TO len
+        LET jsonResult = util.JSONObject.parse(bgEvents[i].result)
+        IF jsonResult.get("status") == "scanResult" THEN
+           LET bge[x:=x+1].* = bgEvents[i].*
+        END IF
+    END FOR
+END FUNCTION
+
+#+ Get new scan result events since last call
+PUBLIC FUNCTION getNewScanResults( bge BgEventArrayT )
+    DEFINE i, x, len INTEGER
+    CALL bge.clear()
+    LET len = bgEvents.getLength()
+    FOR i=scanResultsOffset TO len
+        -- Warning: callbackIdStartScan can change for each startScan
+        IF bgEvents[i].callbackId == callbackIdStartScan THEN
+           LET bge[x:=x+1].* = bgEvents[i].*
+        END IF
+    END FOR
+    LET scanResultsOffset = len+1
+END FUNCTION
+
 PUBLIC FUNCTION clearCallbackBuffer()
     CALL bgEvents.clear()
+    LET scanResultsOffset = 1
 END FUNCTION
+
+{
+
+FIXME: Must also be managed with CONNECT_STATUS_READY/CONNECTING/CONNECTED ...??
+
+PUBLIC FUNCTION connect(address STRING, autoConnect BOOLEAN) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING,
+               autoConnect BOOLEAN
+           END RECORD
+    CALL check_lib_state(1)
+    LET params.address = address
+    LET params.autoConnect = autoConnect
+    TRY
+        CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
+                [BLUETOOTHLEPLUGIN,"connect",params],
+                [callbackIdConnect])
+    CATCH
+        RETURN -1
+    END TRY
+    RETURN 0
+END FUNCTION
+
+PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING,
+               autoConnect BOOLEAN
+           END RECORD
+    CALL check_lib_state(1)
+    LET params.address = address
+    LET params.autoConnect = autoConnect
+    TRY
+        CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
+                [BLUETOOTHLEPLUGIN,"connect",params],
+                [callbackIdConnect])
+    CATCH
+        RETURN -1
+    END TRY
+    RETURN 0
+END FUNCTION
+}
