@@ -12,7 +12,7 @@
 IMPORT util
 
 PUBLIC TYPE BgEventT RECORD
-    time DATETIME HOUR TO SECOND,
+    timestamp DATETIME YEAR TO FRACTION(3),
     callbackId STRING,
     result STRING
 END RECORD
@@ -82,6 +82,31 @@ PRIVATE DEFINE callbackIdStartScan STRING
 
 PRIVATE DEFINE scanResultsOffset INTEGER
 
+-- Structure that covers Android and iOS scan result JSON records
+PUBLIC TYPE ScanResultT RECORD
+       timestamp DATETIME YEAR TO FRACTION(3),
+       ad RECORD
+           android RECORD
+               data STRING
+           END RECORD,
+           ios RECORD
+               serviceUuids DYNAMIC ARRAY OF STRING,
+               manufacturerData STRING,
+               txPowerLevel INTEGER,
+               overflowServiceUuids DYNAMIC ARRAY OF STRING,
+               isConnectable BOOLEAN,
+               solicitedServiceUuids DYNAMIC ARRAY OF STRING,
+               serviceData util.JSONObject,
+               localName STRING
+           END RECORD
+        END RECORD,
+        rssi INTEGER,
+        name STRING,
+        address STRING
+    END RECORD
+PUBLIC TYPE ScanResultArrayT DYNAMIC ARRAY OF ScanResultT
+PRIVATE DEFINE scanResultArray ScanResultArrayT
+
 PRIVATE DEFINE ts DATETIME HOUR TO FRACTION(5)
 
 #+ Initializes the plugin library
@@ -91,7 +116,7 @@ PRIVATE DEFINE ts DATETIME HOUR TO FRACTION(5)
 PUBLIC FUNCTION init()
 
     IF initialized THEN -- exclusive library usage
-        CALL fatalError("The library is already in use.")
+        CALL _fatalError("The library is already in use.")
     END IF
 
     -- Init Options
@@ -122,52 +147,53 @@ PUBLIC FUNCTION fini()
     IF initialized THEN
         CALL scanOptions.services.clear()
         CALL bgEvents.clear()
+        CALL scanResultArray.clear()
         LET initialized = FALSE
     END IF
 END FUNCTION
 
-PRIVATE FUNCTION fatalError(msg STRING)
+PRIVATE FUNCTION _fatalError(msg STRING)
     DISPLAY "fglcdvBluetoothLE error: ", msg
     EXIT PROGRAM 1
 END FUNCTION
 
-PRIVATE FUNCTION check_lib_state(mode SMALLINT)
+PRIVATE FUNCTION _check_lib_state(mode SMALLINT)
     IF NOT initialized THEN
-        CALL fatalError("Library is not initialized.")
+        CALL _fatalError("Library is not initialized.")
     END IF
     IF mode >= 1 THEN
         IF initStatus == INIT_STATUS_ENABLED IS NULL THEN
-            CALL fatalError("BluetoothLE is not initialized.")
+            CALL _fatalError("BluetoothLE is not initialized.")
         END IF
     END IF
 END FUNCTION
 
-PRIVATE FUNCTION getFrontEndName()
-    CALL check_lib_state(0)
+PRIVATE FUNCTION _getFrontEndName()
+    CALL _check_lib_state(0)
     IF frontEndName IS NULL THEN
         WHENEVER ERROR CONTINUE
         CALL ui.Interface.Frontcall("standard", "feinfo", ["fename"], [frontEndName])
         WHENEVER ERROR STOP
         IF NOT (frontEndName=="GMA" OR frontEndName=="GMI") THEN
-            CALL fatalError("Could not identify front-end type.")
+            CALL _fatalError("Could not identify front-end type.")
         END IF
     END IF
     RETURN frontEndName
 END FUNCTION
 
-PRIVATE FUNCTION ts_init()
+PRIVATE FUNCTION _ts_init()
     LET ts = CURRENT HOUR TO FRACTION(5)
 END FUNCTION
-PRIVATE FUNCTION ts_diff()
+PRIVATE FUNCTION _ts_diff()
     RETURN (CURRENT HOUR TO FRACTION(5) - ts)
 END FUNCTION
 
-PRIVATE FUNCTION getCallbackDataCount()
+PRIVATE FUNCTION _getCallbackDataCount()
     DEFINE cnt INTEGER
     TRY
-call ts_init()
+--call _ts_init()
         CALL ui.interface.frontcall("cordova","getCallbackDataCount",[],[cnt])
-display "getCallbackDataCount   : ", ts_diff()
+--display "callback data count    : ", _ts_diff()
     CATCH
         RETURN -1
     END TRY
@@ -176,30 +202,28 @@ END FUNCTION
 
 #+ Processes BluetoothLE Cordova plugin callback events
 #+
-#+
-#+
 #+ @return <0 if error. Otherwise, the number of callback data fetched.
 PUBLIC FUNCTION processCallbackEvents()
     DEFINE result, callbackId STRING,
-           cnt, idx INTEGER,
+           cnt, idx, s INTEGER,
            jsonResult util.JSONObject
-    WHILE getCallbackDataCount()>0
+    WHILE _getCallbackDataCount()>0
         TRY
-call ts_init()
+--call _ts_init()
             CALL ui.interface.frontcall("cordova","getCallbackData",[],[result,callbackId])
-display "getCallbackData        : ", ts_diff()
+--display "getCallbackData        : ", _ts_diff()
         CATCH
             RETURN -1
         END TRY
 display "process result: ", callbackId, " result = ", result
         LET idx = bgEvents.getLength() + 1
-        LET bgEvents[idx].time=CURRENT
+        LET bgEvents[idx].timestamp=CURRENT
         LET bgEvents[idx].callbackId=callbackId
         LET bgEvents[idx].result=result
         LET cnt = cnt + 1
         -- BluetoothLE initialization
-        CASE callbackId
-        WHEN callbackIdInitialize
+        CASE
+        WHEN callbackId == callbackIdInitialize
            LET jsonResult = util.JSONObject.parse(result)
            IF jsonResult.get("status") == "enabled" THEN
                LET initStatus = INIT_STATUS_ENABLED
@@ -209,47 +233,87 @@ display "process result: ", callbackId, " result = ", result
                LET scanStatus = SCAN_STATUS_NOT_READY
            END IF
         -- Scanning
-        WHEN callbackIdStartScan
-display " scan callback!!!!!!"
+        WHEN callbackId == callbackIdStartScan OR TRUE -- GMI/iOS client bug? GMI-744 (see1)
            LET jsonResult = util.JSONObject.parse(result)
            CASE jsonResult.get("status")
            WHEN "scanStarted" -- WARNING: Not produced on iOS!
-display "      set scanStatus to SCAN_STATUS_STARTED"
                LET scanStatus = SCAN_STATUS_STARTED
            WHEN "scanResult"
-display "      set scanStatus to SCAN_STATUS_RESULT"
                LET scanStatus = SCAN_STATUS_RESULT
+               LET s = _addScanResult(jsonResult)
            OTHERWISE
-display "      set scanStatus to SCAN_STATUS_FAILED"
-               LET scanStatus = SCAN_STATUS_FAILED
+               --LET scanStatus = SCAN_STATUS_FAILED (see1)
            END CASE
         END CASE
     END WHILE
     RETURN cnt
 END FUNCTION
 
+PRIVATE FUNCTION _addScanResult(jsonResult util.JSONObject) RETURNS SMALLINT
+    DEFINE x INTEGER
+    DEFINE res ScanResultT
+    DEFINE jobj util.JSONObject
+    DEFINE jarr util.JSONArray
+
+    LET res.timestamp = CURRENT
+    LET res.rssi = jsonResult.get("rssi")
+    LET res.name = jsonResult.get("name")
+    LET res.address = jsonResult.get("address")
+
+    IF _getFrontEndName() == "GMA" THEN
+       LET res.ad.android.data = jsonResult.get("advertisement") -- base64 string
+    ELSE
+       LET jobj = jsonResult.get("advertisement")
+       LET res.ad.ios.localName = jobj.get("localName")
+       LET res.ad.ios.isConnectable = jobj.get("isConnectable")
+       LET res.ad.ios.txPowerLevel = jobj.get("txPowerLevel")
+       LET res.ad.ios.manufacturerData = jobj.get("manufacturerData")
+       LET jarr = jobj.get("serviceUuids")
+       CALL jarr.toFGL( res.ad.ios.serviceUuids)
+       LET jarr = jobj.get("overflowServiceUuids")
+       CALL jarr.toFGL( res.ad.ios.overflowServiceUuids)
+       LET jarr = jobj.get("solicitedServiceUuids")
+       CALL jarr.toFGL( res.ad.ios.solicitedServiceUuids)
+       LET res.ad.ios.serviceData = jobj.get("serviceData") -- variable structure
+    END IF
+
+    LET x = scanResultArray.getLength()+1
+    LET scanResultArray[x].* = res.*
+
+    -- FIXME? What is mandatory?
+    IF res.address IS NOT NULL THEN
+        RETURN 0
+    ELSE
+        RETURN -1
+    END IF
+
+END FUNCTION
+
 PUBLIC FUNCTION canInitialize()
-    CALL check_lib_state(0)
+    CALL _check_lib_state(0)
     RETURN (initStatus == INIT_STATUS_DISABLED
          OR initStatus == INIT_STATUS_FAILED)
 END FUNCTION
 
 #+ Initializes BLE
 #+
-#+ @param initMode INIT_MODE_CENTRAL or INIT_MODE_PERIPHERAL
+#+ @param initMode INIT_MODE_CENTRAL (INIT_MODE_PERIPHERAL not supported yet)
 #+ @param initOptions the initialization options of (see InitOptionsT)
 #+
 #+ @return 0 on success, <0 if error.
 PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS INTEGER
 --define result string
-    CALL check_lib_state(0)
-    CALL bgEvents.clear()
-    LET scanResultsOffset = 1
+    CALL _check_lib_state(0)
+    CALL clearCallbackBuffer()
+    CALL clearScanResultBuffer()
     IF callbackIdInitialize IS NOT NULL THEN
         RETURN -2
     END IF
     IF initStatus != INIT_STATUS_DISABLED THEN
         RETURN -3
+    END IF
+    IF initMode!=INIT_MODE_CENTRAL THEN
+        RETURN -4
     END IF
     TRY
         LET initStatus = INIT_STATUS_IN_PROGRESS
@@ -315,62 +379,62 @@ PRIVATE FUNCTION _syncCallP1RB(funcname STRING, resinfo STRING) RETURNS BOOLEAN
 END FUNCTION
 
 PUBLIC FUNCTION isInitialized() RETURNS BOOLEAN
-    CALL check_lib_state(0)
+    CALL _check_lib_state(0)
     RETURN _syncCallP1RB("isInitialized",NULL)
 END FUNCTION
 
 { FIXME
 PUBLIC FUNCTION enable() RETURNS SMALLINT
     DEFINE r SMALLINT, v STRING
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     CALL _syncCallP1RS("enable", "enabled") RETURNING r, v
     RETURN r
 END FUNCTION
 
 PUBLIC FUNCTION disable() RETURNS SMALLINT
     DEFINE r SMALLINT, v STRING
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     CALL _syncCallP1RS("disable", "disabled") RETURNING r, v
     RETURN r
 END FUNCTION
 }
 
 PUBLIC FUNCTION isEnabled() RETURNS BOOLEAN
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     RETURN _syncCallP1RB("isEnabled",NULL)
 END FUNCTION
 
 PUBLIC FUNCTION isScanning() RETURNS BOOLEAN
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     RETURN _syncCallP1RB("isScanning",NULL)
 END FUNCTION
 
 PUBLIC FUNCTION hasCoarseLocationPermission() RETURNS BOOLEAN
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     RETURN _syncCallP1RB("hasPermission",NULL)
 END FUNCTION
 
 PUBLIC FUNCTION askForCoarseLocationPermission() RETURNS BOOLEAN
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     RETURN _syncCallP1RB("requestPermission",NULL)
 END FUNCTION
 
 PUBLIC FUNCTION canStartScan()
-    CALL check_lib_state(0)
+    CALL _check_lib_state(0)
     RETURN (scanStatus == SCAN_STATUS_READY
          OR scanStatus == SCAN_STATUS_STOPPED
          OR scanStatus == SCAN_STATUS_FAILED)
 END FUNCTION
 
 PUBLIC FUNCTION canStopScan()
-    CALL check_lib_state(0)
+    CALL _check_lib_state(0)
 --display " scanStatus = ", scanStatus
     RETURN (scanStatus == SCAN_STATUS_STARTED
          OR scanStatus == SCAN_STATUS_RESULT)
 END FUNCTION
 
 PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     IF NOT (scanStatus == SCAN_STATUS_READY
          OR scanStatus == SCAN_STATUS_STOPPED
          OR scanStatus == SCAN_STATUS_FAILED)
@@ -378,7 +442,7 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
         RETURN -1
     END IF
     -- On Android we always have to ask for permission
-    IF getFrontEndName() == "GMA" THEN
+    IF _getFrontEndName() == "GMA" THEN
         IF NOT hasCoarseLocationPermission() THEN
             IF NOT askForCoarseLocationPermission() THEN
                 RETURN -2
@@ -399,7 +463,7 @@ END FUNCTION
 
 PUBLIC FUNCTION stopScan() RETURNS INTEGER
     DEFINE r SMALLINT, v STRING
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     IF NOT canStopScan() THEN
         RETURN -1
     END IF
@@ -431,53 +495,44 @@ END FUNCTION
 
 ---
 
-PUBLIC FUNCTION getCallbackData( bge BgEventArrayT )
+PUBLIC FUNCTION getCallbackDataEvents( bge BgEventArrayT )
     CALL bgEvents.copyTo( bge )
-END FUNCTION
-
-#+ Get all scan result events since initialization
-PUBLIC FUNCTION getAllScanResults( bge BgEventArrayT )
-    DEFINE i, x, len INTEGER
-    DEFINE jsonResult util.JSONObject
-    CALL bge.clear()
-    LET len = bgEvents.getLength()
-    FOR i=1 TO len
-        LET jsonResult = util.JSONObject.parse(bgEvents[i].result)
-        IF jsonResult.get("status") == "scanResult" THEN
-           LET bge[x:=x+1].* = bgEvents[i].*
-        END IF
-    END FOR
-END FUNCTION
-
-#+ Get new scan result events since last call
-PUBLIC FUNCTION getNewScanResults( bge BgEventArrayT )
-    DEFINE i, x, len INTEGER
-    CALL bge.clear()
-    LET len = bgEvents.getLength()
-    FOR i=scanResultsOffset TO len
-        -- Warning: callbackIdStartScan can change for each startScan
-        IF bgEvents[i].callbackId == callbackIdStartScan THEN
-           LET bge[x:=x+1].* = bgEvents[i].*
-        END IF
-    END FOR
-    LET scanResultsOffset = len+1
 END FUNCTION
 
 PUBLIC FUNCTION clearCallbackBuffer()
     CALL bgEvents.clear()
+END FUNCTION
+
+PUBLIC FUNCTION getScanResults( sra DYNAMIC ARRAY OF ScanResultT )
+    CALL scanResultArray.copyTo( sra )
+END FUNCTION
+
+PUBLIC FUNCTION getNewScanResults( sra DYNAMIC ARRAY OF ScanResultT )
+    DEFINE i, x, len INTEGER
+    CALL sra.clear()
+    IF scanResultsOffset <= 0 THEN RETURN END IF
+    LET len = scanResultArray.getLength()
+    FOR i=scanResultsOffset TO len
+        LET sra[x:=x+1].* = scanResultArray[i].*
+    END FOR
+    LET scanResultsOffset = len + 1
+END FUNCTION
+
+PUBLIC FUNCTION clearScanResultBuffer()
+    CALL scanResultArray.clear()
     LET scanResultsOffset = 1
 END FUNCTION
 
 {
 
-FIXME: Must also be managed with CONNECT_STATUS_READY/CONNECTING/CONNECTED ...??
+# Must also be managed with CONNECT_STATUS_READY/CONNECTING/CONNECTED ...??
 
 PUBLIC FUNCTION connect(address STRING, autoConnect BOOLEAN) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,
                autoConnect BOOLEAN
            END RECORD
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     LET params.address = address
     LET params.autoConnect = autoConnect
     TRY
@@ -495,7 +550,7 @@ PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
                address STRING,
                autoConnect BOOLEAN
            END RECORD
-    CALL check_lib_state(1)
+    CALL _check_lib_state(1)
     LET params.address = address
     LET params.autoConnect = autoConnect
     TRY

@@ -55,11 +55,14 @@ MAIN
     ON ACTION initialize ATTRIBUTES(TEXT="Initialize")
        LET fglcdvBluetoothLE.initOptions.request=TRUE
        LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
+{
        MENU "Initialization" ATTRIBUTES(STYLE="popup")
            COMMAND "Central"     LET m = fglcdvBluetoothLE.INIT_MODE_CENTRAL
            COMMAND "Peripheral"  LET m = fglcdvBluetoothLE.INIT_MODE_PERIPHERAL
            COMMAND "Cancel"      LET m = -1
        END MENU
+}
+       LET m = fglcdvBluetoothLE.INIT_MODE_CENTRAL
        IF m != -1 THEN
           IF fglcdvBluetoothLE.initialize(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN
              LET inforec.message = "BluetoothLE initialization started."
@@ -125,8 +128,11 @@ MAIN
                        CURRENT HOUR TO FRACTION(3), cnt )
        END IF
 
-    ON ACTION showevents ATTRIBUTES(TEXT="Show Background events")
+    ON ACTION showevents ATTRIBUTES(TEXT="Show background events")
        CALL showBgEvents()
+
+    ON ACTION showresults ATTRIBUTES(TEXT="Show last scan results")
+       CALL showScanResults()
 
     END INPUT
 
@@ -159,37 +165,61 @@ END FUNCTION
 
 PRIVATE FUNCTION showBgEvents()
   DEFINE bgEvents fglcdvBluetoothLE.BgEventArrayT
-  DEFINE result STRING
+  DEFINE info STRING
   DEFINE cnt INTEGER
-  CALL fglcdvBluetoothLE.getCallbackData( bgEvents )
-  OPEN WINDOW bgEvents WITH FORM "bgevents"
+  CALL fglcdvBluetoothLE.getCallbackDataEvents( bgEvents )
+  OPEN WINDOW w1 WITH FORM "bgevents"
   DISPLAY ARRAY bgEvents TO scr.* ATTRIBUTES(UNBUFFERED,DOUBLECLICK=select,CANCEL=FALSE)
      ON ACTION clearevents ATTRIBUTES(TEXT="Clear")
        CALL fglcdvBluetoothLE.clearCallbackBuffer( )
        CALL DIALOG.deleteAllRows("scr")
      ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
        LET cnt = fglcdvBluetoothLE.processCallbackEvents()
-display "DA cordocacallback! fetched events = ", cnt
-       CALL fglcdvBluetoothLE.getCallbackData( bgEvents )
-display "DA getCallbackData: total events   = ", bgEvents.getLength()
+       CALL fglcdvBluetoothLE.getCallbackDataEvents( bgEvents )
        CALL DIALOG.setCurrentRow("scr", bgEvents.getLength())
-display "DA new row: ", DIALOG.getArrayLength("scr")
      ON ACTION select
-       OPEN WINDOW detail WITH FORM "detail"
-       DISPLAY bgEvents[arr_curr()].callbackId TO callbackId
-       LET result=bgEvents[arr_curr()].result
-       IF result.getLength()>1000 THEN
-         LET result=result.subString(1,1000)
-       END IF
-       DISPLAY result TO info
-       --ERROR bgEvents[arr_curr()].result
-       MENU
-         ON ACTION close
-           EXIT MENU
+       LET info = bgEvents[arr_count()].result
+       MENU bgEvents[arr_count()].callbackId ATTRIBUTES(STYLE="dialog",COMMENT=info)
+         COMMAND "Ok" EXIT MENU
        END MENU
-       CLOSE WINDOW detail
   END DISPLAY
-  CLOSE WINDOW bgEvents
+  CLOSE WINDOW w1
+END FUNCTION
+
+PRIVATE FUNCTION showScanResults()
+  DEFINE resarr fglcdvBluetoothLE.ScanResultArrayT
+  DEFINE info STRING
+  DEFINE x, cnt INTEGER
+  DEFINE disparr DYNAMIC ARRAY OF RECORD
+                 address STRING,
+                 timestamp DATETIME YEAR TO FRACTION(3)
+             END RECORD
+  CALL fglcdvBluetoothLE.getNewScanResults( resarr )
+  IF resarr.getLength() == 0 THEN
+      ERROR "No scan results to display."
+      RETURN
+  END IF
+  FOR x=1 TO resarr.getLength()
+      LET disparr[x].address = resarr[x].address
+      LET disparr[x].timestamp = resarr[x].timestamp
+  END FOR
+  OPEN WINDOW w2 WITH FORM "scanres"
+  DISPLAY ARRAY disparr TO scr.* ATTRIBUTES(UNBUFFERED,DOUBLECLICK=select,CANCEL=FALSE)
+     ON ACTION clear ATTRIBUTES(TEXT="Clear")
+       CALL fglcdvBluetoothLE.clearScanResultBuffer( )
+       MESSAGE "Scan results cleared"
+       CALL DIALOG.deleteAllRows("scr")
+      ON ACTION select
+        IF getFrontEndName() == "GMA" THEN
+           LET info = util.JSON.stringify(resarr[arr_count()].ad.android)
+        ELSE
+           LET info = util.JSON.stringify(resarr[arr_count()].ad.ios)
+        END IF
+        MENU disparr[arr_count()].address ATTRIBUTES(STYLE="dialog",COMMENT=info)
+          COMMAND "Ok" EXIT MENU
+        END MENU
+  END DISPLAY
+  CLOSE WINDOW w2
 END FUNCTION
 
 PRIVATE FUNCTION getFrontEndName()

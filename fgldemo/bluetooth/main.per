@@ -6,6 +6,7 @@ GRID
 [b3                                   ]
 [b4                                   ]
 [b5                                   ]
+[b6                                   ]
 Init status: [f1                      ]
 Scan status: [f2                      ]
 [fm                                   ]
@@ -22,8 +23,9 @@ EDIT f2 = FORMONLY.scanstatusstr;
 BUTTON b1 : initialize, TEXT="Initialize";
 BUTTON b2 : startscan, TEXT="Start Scan";
 BUTTON b3 : stopscan, TEXT="Stop Scan";
-BUTTON b4 : showevents, TEXT="Show events";
-BUTTON b5 : queryinfo, TEXT="Query info";
+BUTTON b4 : showevents, TEXT="Show background events";
+BUTTON b5 : showresults, TEXT="Show scan results";
+BUTTON b6 : queryinfo, TEXT="Query info";
 EDIT fm = FORMONLY.message, SCROLL;
 TEXTEDIT fe = FORMONLY.evtinfo, STRETCH=BOTH;
 END

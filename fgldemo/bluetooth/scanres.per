@@ -8,18 +8,15 @@
 # purely for information purposes only.
 
 LAYOUT
-GRID
+TABLE
 {
-<G "Detail"                            >
- Id[callbackId                         ]
-[info                                  ]
-[                                      ]
-[                                      ]
-[                                      ]
+[addr                        |ts                     ]
 }
 END
 ATTRIBUTES
-callbackId=FORMONLY.callbackId;
-TEXTEDIT info=FORMONLY.info,STRETCH=BOTH;
+addr=FORMONLY.address, SCROLL;
+ts=FORMONLY.timestamp, JUSTIFY=LEFT;
 END
-
+INSTRUCTIONS
+SCREEN RECORD scr(FORMONLY.*);
+END

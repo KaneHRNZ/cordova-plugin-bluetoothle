@@ -10,14 +10,14 @@
 LAYOUT
 TABLE
 {
-[time       |callbackId         ]
+[cbid                        |ts                     ]
 }
 END
 ATTRIBUTES
-time=FORMONLY.time;
-callbackid=FORMONLY.callbackid;
+cbid=FORMONLY.callbackid, SCROLL;
+ts=FORMONLY.timestamp, JUSTIFY=LEFT;
 PHANTOM FORMONLY.result;
-
+END
 INSTRUCTIONS
-SCREEN RECORD scr(time,callbackid,result);
-
+SCREEN RECORD scr( FORMONLY.timestamp, FORMONLY.callbackId, FORMONLY.result);
+END

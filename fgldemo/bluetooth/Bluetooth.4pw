@@ -83,8 +83,9 @@
   <Group label="Project" language="Genero">
     <Application binaryName="Application" dependencies="159917928,212784684,362164715,455109296" environment="dirlist:FGLIMAGEPATH=$(ProjectDir)/images;$(FGLDIR)/lib/image2font.txt;$(ProjectDir)/webcomponents;$(FGLIMAGEPATH)" id="400358049" label="Application">
       <File filePath="main.4gl"/>
+      <File filePath="main.per"/>
       <File filePath="bgevents.per"/>
-      <File filePath="detail.per"/>
+      <File filePath="scanres.per"/>
     </Application>
   </Group>
 </Project>
