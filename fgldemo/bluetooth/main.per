@@ -2,13 +2,17 @@ LAYOUT (TEXT="Cordova Bluetooth Demo")
 GRID
 {
 [b1                                   ]
+Init status: [f1                      ]
 [b2                                   ]
+Scan status: [f2                      ]
 [b3                                   ]
 [b4                                   ]
 [b5                                   ]
+Curr address:[f3                      ]
 [b6                                   ]
-Init status: [f1                      ]
-Scan status: [f2                      ]
+Conn status: [f4                      ]
+[b7                                   ]
+[b8                                   ]
 [fm                                   ]
 [fe                                   ]
 [                                     ]
@@ -18,14 +22,18 @@ END
 END
 
 ATTRIBUTES
-EDIT f1 = FORMONLY.initstatusstr;
-EDIT f2 = FORMONLY.scanstatusstr;
+EDIT f1 = FORMONLY.initstatusstr, NOENTRY;
+EDIT f2 = FORMONLY.scanstatusstr, NOENTRY;
+EDIT f3 = FORMONLY.curraddress, SCROLL;
+EDIT f4 = FORMONLY.connstatusstr, NOENTRY;
 BUTTON b1 : initialize, TEXT="Initialize";
 BUTTON b2 : startscan, TEXT="Start Scan";
 BUTTON b3 : stopscan, TEXT="Stop Scan";
 BUTTON b4 : showevents, TEXT="Show background events";
 BUTTON b5 : showresults, TEXT="Show scan results";
-BUTTON b6 : queryinfo, TEXT="Query info";
+BUTTON b6 : connect, TEXT="Connect to address";
+BUTTON b7 : close, TEXT="Close connection";
+BUTTON b8 : queryinfo, TEXT="Query info";
 EDIT fm = FORMONLY.message, SCROLL;
 TEXTEDIT fe = FORMONLY.evtinfo, STRETCH=BOTH;
 END

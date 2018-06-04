@@ -14,9 +14,12 @@ IMPORT FGL fglcdvBluetoothLE
 PRIVATE DEFINE inforec RECORD
                initStatusStr STRING,
                scanStatusStr STRING,
+               connStatusStr STRING,
                message STRING,
-               evtinfo STRING
+               evtinfo STRING,
+               curraddress STRING
            END RECORD
+
 
 --we just check if we can call some of the core functions
 --in this plugin (scanning the neighbourhood)
@@ -134,6 +137,19 @@ MAIN
     ON ACTION showresults ATTRIBUTES(TEXT="Show last scan results")
        CALL showScanResults()
 
+    ON ACTION connect ATTRIBUTES(TEXT="Connect to address")
+       IF fglcdvBluetoothLE.connect(inforec.curraddress) >= 0 THEN
+          LET inforec.message = "BluetoothLE connection asked."
+       ELSE
+          ERROR "BluetoothLE connection query failed."
+       END IF
+    ON ACTION close ATTRIBUTES(TEXT="Close connection")
+       IF fglcdvBluetoothLE.close(inforec.curraddress) >= 0 THEN
+          LET inforec.message = "BluetoothLE connection close asked."
+       ELSE
+          ERROR "BluetoothLE connection close query failed."
+       END IF
+
     END INPUT
 
     CALL fglcdvBluetoothLE.fini()
@@ -142,17 +158,23 @@ END MAIN
 
 PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     DEFINE tmp STRING
+    DEFINE hasAddr BOOLEAN
+    LET hasAddr = (LENGTH(inforec.curraddress)>0)
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
     CALL d.setActionActive("startscan",  fglcdvBluetoothLE.canStartScan())
     CALL d.setActionActive("stopscan",   fglcdvBluetoothLE.canStopScan())
+    CALL d.setActionActive("connect",    hasAddr AND fglcdvBluetoothLE.canConnect())
+    CALL d.setActionActive("close",      hasAddr AND fglcdvBluetoothLE.canClose())
     LET tmp = fglcdvBluetoothLE.initializationStatusToString(
                     fglcdvBluetoothLE.getInitializationStatus() )
+    -- Init status
     IF tmp == inforec.initStatusStr THEN
        DISPLAY BY NAME inforec.initStatusStr
     ELSE
        LET inforec.initStatusStr = tmp
        DISPLAY BY NAME inforec.initStatusStr ATTRIBUTE(RED)
     END IF
+    -- Scan status
     LET tmp = fglcdvBluetoothLE.scanStatusToString(
                     fglcdvBluetoothLE.getScanStatus())
     IF tmp == inforec.scanStatusStr THEN
@@ -160,6 +182,15 @@ PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     ELSE
        LET inforec.scanStatusStr = tmp
        DISPLAY BY NAME inforec.scanStatusStr ATTRIBUTE(RED)
+    END IF
+    -- Connect status
+    LET tmp = fglcdvBluetoothLE.connectStatusToString(
+                    fglcdvBluetoothLE.getConnectStatus())
+    IF tmp == inforec.connStatusStr THEN
+       DISPLAY BY NAME inforec.connStatusStr
+    ELSE
+       LET inforec.connStatusStr = tmp
+       DISPLAY BY NAME inforec.connStatusStr ATTRIBUTE(RED)
     END IF
 END FUNCTION
 
@@ -206,9 +237,9 @@ PRIVATE FUNCTION showScanResults()
   OPEN WINDOW w2 WITH FORM "scanres"
   DISPLAY ARRAY disparr TO scr.* ATTRIBUTES(UNBUFFERED,DOUBLECLICK=select,CANCEL=FALSE)
      ON ACTION clear ATTRIBUTES(TEXT="Clear")
-       CALL fglcdvBluetoothLE.clearScanResultBuffer( )
-       MESSAGE "Scan results cleared"
-       CALL DIALOG.deleteAllRows("scr")
+        CALL fglcdvBluetoothLE.clearScanResultBuffer( )
+        MESSAGE "Scan results cleared"
+        CALL DIALOG.deleteAllRows("scr")
       ON ACTION select
         IF getFrontEndName() == "GMA" THEN
            LET info = util.JSON.stringify(resarr[arr_count()].ad.android)
@@ -216,6 +247,8 @@ PRIVATE FUNCTION showScanResults()
            LET info = util.JSON.stringify(resarr[arr_count()].ad.ios)
         END IF
         MENU disparr[arr_count()].address ATTRIBUTES(STYLE="dialog",COMMENT=info)
+          COMMAND "Save address"
+            LET inforec.curraddress = disparr[arr_count()].address
           COMMAND "Ok" EXIT MENU
         END MENU
   END DISPLAY

@@ -40,7 +40,7 @@ PUBLIC CONSTANT SCAN_STATUS_STARTING  = 2
 PUBLIC CONSTANT SCAN_STATUS_STARTED   = 3
 PUBLIC CONSTANT SCAN_STATUS_STOPPED   = 4
 PUBLIC CONSTANT SCAN_STATUS_FAILED    = 5
-PUBLIC CONSTANT SCAN_STATUS_RESULT    = 6
+PUBLIC CONSTANT SCAN_STATUS_RESULTS   = 6
 
 PUBLIC CONSTANT SCAN_MODE_OPPORTUNISTIC = -1
 PUBLIC CONSTANT SCAN_MODE_LOW_POWER     = 0
@@ -57,6 +57,14 @@ PUBLIC CONSTANT MATCH_NUM_MAX_ADVERTISEMENT = 3
 PUBLIC CONSTANT CALLBACK_TYPE_ALL_MATCHES = 1
 PUBLIC CONSTANT CALLBACK_TYPE_FIRST_MATCH = 2
 PUBLIC CONSTANT CALLBACK_TYPE_MATCH_LOST  = 4
+
+PUBLIC CONSTANT CONNECT_STATUS_NOT_READY    = 0
+PUBLIC CONSTANT CONNECT_STATUS_READY        = 1
+PUBLIC CONSTANT CONNECT_STATUS_CONNECTING   = 2
+PUBLIC CONSTANT CONNECT_STATUS_CONNECTED    = 3
+PUBLIC CONSTANT CONNECT_STATUS_DISCONNECTED = 4
+PUBLIC CONSTANT CONNECT_STATUS_CLOSED       = 5
+PUBLIC CONSTANT CONNECT_STATUS_FAILED       = 6
 
 PUBLIC TYPE ScanOptionsT RECORD
   services DYNAMIC ARRAY OF STRING,
@@ -77,8 +85,10 @@ PRIVATE DEFINE frontEndName STRING
 
 PRIVATE DEFINE initStatus SMALLINT -- BluetoothLE initialization status
 PRIVATE DEFINE scanStatus SMALLINT
+PRIVATE DEFINE connStatus SMALLINT
 PRIVATE DEFINE callbackIdInitialize STRING
-PRIVATE DEFINE callbackIdStartScan STRING
+PRIVATE DEFINE callbackIdScan STRING
+PRIVATE DEFINE callbackIdConnect STRING
 
 PRIVATE DEFINE scanResultsOffset INTEGER
 
@@ -134,6 +144,7 @@ PUBLIC FUNCTION init()
 
     LET initStatus = INIT_STATUS_DISABLED -- BLE init status
     LET scanStatus = SCAN_STATUS_NOT_READY
+    LET connStatus = CONNECT_STATUS_NOT_READY
 
     LET initialized = TRUE -- Lib init status
 
@@ -150,6 +161,14 @@ PUBLIC FUNCTION fini()
         CALL scanResultArray.clear()
         LET initialized = FALSE
     END IF
+END FUNCTION
+
+PRIVATE FUNCTION _cleanup()
+    DEFINE s INTEGER
+    IF canStopScan() THEN
+       LET s = stopScan()
+    END IF
+    -- TODO: if connected, disconnect
 END FUNCTION
 
 PRIVATE FUNCTION _fatalError(msg STRING)
@@ -205,9 +224,11 @@ END FUNCTION
 #+ @return <0 if error. Otherwise, the number of callback data fetched.
 PUBLIC FUNCTION processCallbackEvents()
     DEFINE result, callbackId STRING,
-           cnt, idx, s INTEGER,
+           cnt, x, idx, s INTEGER,
            jsonResult util.JSONObject
-    WHILE _getCallbackDataCount()>0
+    LET cnt = _getCallbackDataCount()
+display "result count = ", cnt
+    FOR x=1 TO cnt
         TRY
 --call _ts_init()
             CALL ui.interface.frontcall("cordova","getCallbackData",[],[result,callbackId])
@@ -215,12 +236,12 @@ PUBLIC FUNCTION processCallbackEvents()
         CATCH
             RETURN -1
         END TRY
-display "process result: ", callbackId, " result = ", result
+display "  process result: ", callbackId, " result = ", result
         LET idx = bgEvents.getLength() + 1
         LET bgEvents[idx].timestamp=CURRENT
         LET bgEvents[idx].callbackId=callbackId
         LET bgEvents[idx].result=result
-        LET cnt = cnt + 1
+        --LET cnt = cnt + 1
         -- BluetoothLE initialization
         CASE
         WHEN callbackId == callbackIdInitialize
@@ -228,24 +249,38 @@ display "process result: ", callbackId, " result = ", result
            IF jsonResult.get("status") == "enabled" THEN
                LET initStatus = INIT_STATUS_ENABLED
                LET scanStatus = SCAN_STATUS_READY
+               LET connStatus = CONNECT_STATUS_READY
            ELSE
                LET initStatus = INIT_STATUS_FAILED
                LET scanStatus = SCAN_STATUS_NOT_READY
+               LET connStatus = CONNECT_STATUS_NOT_READY
            END IF
         -- Scanning
-        WHEN callbackId == callbackIdStartScan OR TRUE -- GMI/iOS client bug? GMI-744 (see1)
+        WHEN callbackId == callbackIdScan
            LET jsonResult = util.JSONObject.parse(result)
            CASE jsonResult.get("status")
-           WHEN "scanStarted" -- WARNING: Not produced on iOS!
+           WHEN "scanStarted"
                LET scanStatus = SCAN_STATUS_STARTED
            WHEN "scanResult"
-               LET scanStatus = SCAN_STATUS_RESULT
+               LET scanStatus = SCAN_STATUS_RESULTS
                LET s = _addScanResult(jsonResult)
            OTHERWISE
-               --LET scanStatus = SCAN_STATUS_FAILED (see1)
+               LET scanStatus = SCAN_STATUS_FAILED
+           END CASE
+        WHEN callbackId == callbackIdConnect
+           LET jsonResult = util.JSONObject.parse(result)
+           CASE jsonResult.get("status")
+           WHEN "connected"
+               LET connStatus = CONNECT_STATUS_CONNECTED
+           WHEN "disconnected"
+               LET connStatus = CONNECT_STATUS_DISCONNECTED
+           WHEN "closed"
+               LET connStatus = CONNECT_STATUS_CLOSED
+           OTHERWISE
+               LET connStatus = CONNECT_STATUS_FAILED
            END CASE
         END CASE
-    END WHILE
+    END FOR
     RETURN cnt
 END FUNCTION
 
@@ -302,7 +337,6 @@ END FUNCTION
 #+
 #+ @return 0 on success, <0 if error.
 PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS INTEGER
---define result string
     CALL _check_lib_state(0)
     CALL clearCallbackBuffer()
     CALL clearScanResultBuffer()
@@ -313,7 +347,7 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
         RETURN -3
     END IF
     IF initMode!=INIT_MODE_CENTRAL THEN
-        RETURN -4
+        CALL _fatalError("Only central mode is supported for now.")
     END IF
     TRY
         LET initStatus = INIT_STATUS_IN_PROGRESS
@@ -331,6 +365,7 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
 display "initialize result: ", result
         LET initStatus = INIT_STATUS_ENABLED
         LET scanStatus = SCAN_STATUS_READY
+END IF
 }
     CATCH
         RETURN -1
@@ -430,7 +465,7 @@ PUBLIC FUNCTION canStopScan()
     CALL _check_lib_state(0)
 --display " scanStatus = ", scanStatus
     RETURN (scanStatus == SCAN_STATUS_STARTED
-         OR scanStatus == SCAN_STATUS_RESULT)
+         OR scanStatus == SCAN_STATUS_RESULTS)
 END FUNCTION
 
 PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
@@ -452,8 +487,8 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
     TRY
         CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN,"startScan",scanOptions],
-                [callbackIdStartScan])
-display "startScan callbackId = ", callbackIdStartScan
+                [callbackIdScan])
+display "startScan callbackId = ", callbackIdScan
         LET scanStatus = SCAN_STATUS_STARTING
     CATCH
         RETURN -1
@@ -488,7 +523,7 @@ PUBLIC FUNCTION scanStatusToString(scanStatus SMALLINT) RETURNS STRING
     WHEN SCAN_STATUS_STARTED   RETURN "Started"
     WHEN SCAN_STATUS_STOPPED   RETURN "Stopped"
     WHEN SCAN_STATUS_FAILED    RETURN "Failed"
-    WHEN SCAN_STATUS_RESULT    RETURN "Result"
+    WHEN SCAN_STATUS_RESULTS   RETURN "Results"
     OTHERWISE RETURN NULL
     END CASE
 END FUNCTION
@@ -523,18 +558,16 @@ PUBLIC FUNCTION clearScanResultBuffer()
     LET scanResultsOffset = 1
 END FUNCTION
 
-{
-
 # Must also be managed with CONNECT_STATUS_READY/CONNECTING/CONNECTED ...??
 
-PUBLIC FUNCTION connect(address STRING, autoConnect BOOLEAN) RETURNS SMALLINT
+PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,
                autoConnect BOOLEAN
            END RECORD
     CALL _check_lib_state(1)
     LET params.address = address
-    LET params.autoConnect = autoConnect
+    LET params.autoConnect = FALSE -- (Android) we assume a scan was done.
     TRY
         CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN,"connect",params],
@@ -547,19 +580,49 @@ END FUNCTION
 
 PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
     DEFINE params RECORD
-               address STRING,
-               autoConnect BOOLEAN
+               address STRING
            END RECORD
     CALL _check_lib_state(1)
+    IF NOT canClose() THEN
+       RETURN -2
+    END IF
     LET params.address = address
-    LET params.autoConnect = autoConnect
     TRY
         CALL ui.interface.frontcall("cordova", "callWithoutWaiting",
-                [BLUETOOTHLEPLUGIN,"connect",params],
+                [BLUETOOTHLEPLUGIN,"close",params],
                 [callbackIdConnect])
     CATCH
         RETURN -1
     END TRY
     RETURN 0
 END FUNCTION
-}
+
+PUBLIC FUNCTION getConnectStatus() RETURNS SMALLINT
+    RETURN connStatus
+END FUNCTION
+
+PUBLIC FUNCTION connectStatusToString(connStatus SMALLINT) RETURNS STRING
+    CASE connStatus
+    WHEN CONNECT_STATUS_NOT_READY    RETURN "Not ready"
+    WHEN CONNECT_STATUS_READY        RETURN "Ready"
+    WHEN CONNECT_STATUS_CONNECTING   RETURN "Connecting"
+    WHEN CONNECT_STATUS_CONNECTED    RETURN "Connected"
+    WHEN CONNECT_STATUS_DISCONNECTED RETURN "Disconnected"
+    WHEN CONNECT_STATUS_CLOSED       RETURN "Closed"
+    WHEN CONNECT_STATUS_FAILED       RETURN "Failed"
+    OTHERWISE RETURN NULL
+    END CASE
+END FUNCTION
+
+PUBLIC FUNCTION canConnect()
+    CALL _check_lib_state(0)
+    RETURN (connStatus == CONNECT_STATUS_READY
+         OR connStatus == CONNECT_STATUS_FAILED
+         OR connStatus == CONNECT_STATUS_DISCONNECTED)
+END FUNCTION
+
+PUBLIC FUNCTION canClose()
+    CALL _check_lib_state(0)
+    RETURN (connStatus == CONNECT_STATUS_CONNECTED
+         OR connStatus == CONNECT_STATUS_DISCONNECTED)
+END FUNCTION
