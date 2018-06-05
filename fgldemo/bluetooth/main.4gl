@@ -21,7 +21,7 @@ PRIVATE DEFINE addrCombobox ui.ComboBox
 --we just check if we can call some of the core functions
 --in this plugin (scanning the neighbourhood)
 MAIN
-    DEFINE fen STRING, cnt, m INT
+    DEFINE fen STRING, cnt, m, s, s2 INT
 
     LET fen = getFrontEndName()
 
@@ -35,13 +35,6 @@ MAIN
     BEFORE INPUT
       LET addrCombobox = ui.ComboBox.forName("formonly.address")
       --for CALL DIALOG.setActionHidden("cordovacallback",1) -- GMI bug ignoring ATTRIBUTES(DEFAULTVIEW=NO)?
-{
-      IF fen == "GMI" THEN
-         CALL DIALOG.setActionHidden("enable",1)
-         CALL DIALOG.setActionHidden("disable",1)
-         CALL DIALOG.setActionHidden("isenabled",1)
-      END IF
-}
       CALL setup_dialog(DIALOG)
 
     -- BLD Cordova callback events can happen asynchroneously even for basic
@@ -82,20 +75,11 @@ MAIN
            MESSAGE SFMT("Scanning: %1", fglcdvBluetoothLE.isScanning())
        ON ACTION isconnected ATTRIBUTES(TEXT="Is Connected?")
            MESSAGE SFMT("Connected: %1", fglcdvBluetoothLE.isConnected(inforec.address))
-       --ON ACTION isenabled ATTRIBUTES(TEXT="Is enabled? (Android)")
-       --    MESSAGE SFMT("Enabled: %1", fglcdvBluetoothLE.isEnabled())
        ON ACTION cancel ATTRIBUTES(TEXT="Exit")
            EXIT MENU
        END MENU
        CLOSE WINDOW w_query
        CALL setup_dialog(DIALOG)
-
-{
-    ON ACTION enable ATTRIBUTES(TEXT="Enable (Android)")
-       MESSAGE SFMT("Enable: %1", fglcdvBluetoothLE.enable())
-    ON ACTION disable ATTRIBUTES(TEXT="Disable (Android)")
-       MESSAGE SFMT("Disable: %1", fglcdvBluetoothLE.disable())
-}
 
     ON ACTION startscan ATTRIBUTES(TEXT="Start Scan")
        INITIALIZE fglcdvBluetoothLE.scanOptions.* TO NULL
@@ -111,7 +95,6 @@ MAIN
        --LET fglcdvBluetoothLE.scanOptions.services[2] = "180F"
        IF fglcdvBluetoothLE.startScan( fglcdvBluetoothLE.scanOptions.* ) >= 0 THEN
           MESSAGE "BluetoothLE scan started."
-          CALL showBgEvents()
        ELSE
           ERROR "BluetoothLE scan failed to start."
        END IF
@@ -126,6 +109,7 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
+       LET s = fglcdvBluetoothLE.getConnectStatus(inforec.address)
        LET cnt = fglcdvBluetoothLE.processCallbackEvents()
        IF cnt >= 0 THEN
           LET inforec.infomsg = SFMT(" %1: cordovacallback action : %2 events processed ",
@@ -134,14 +118,27 @@ MAIN
           LET inforec.infomsg = SFMT(" %1: cordovacallback action : error %2 while processing callback results.",
                        CURRENT HOUR TO FRACTION(3), cnt )
        END IF
+       LET s2 = fglcdvBluetoothLE.getConnectStatus(inforec.address)
+       IF s2 != s AND s2 == CONNECT_STATUS_FAILED THEN
+           IF mbox_yn("Connection",
+              SFMT("BLE Connection to: \n%1\n has failed.\nDo you want to close the connection?",inforec.address)) THEN
+               LET s = fglcdvBluetoothLE.close(inforec.address)
+           END IF
+       END IF
+       CALL fillAddressCombobox()
        CALL setup_dialog(DIALOG)
 
     ON ACTION showevents ATTRIBUTES(TEXT="Show background events")
+       CALL fillAddressCombobox()
        CALL showBgEvents()
        CALL setup_dialog(DIALOG)
 
     ON ACTION showresults ATTRIBUTES(TEXT="Show last scan results")
+       CALL fillAddressCombobox()
        CALL showScanResults()
+       CALL setup_dialog(DIALOG)
+
+    ON CHANGE address
        CALL setup_dialog(DIALOG)
 
     ON ACTION connect ATTRIBUTES(TEXT="Connect to address")
@@ -166,14 +163,24 @@ MAIN
 
 END MAIN
 
+PRIVATE FUNCTION mbox_yn(tit STRING, msg STRING) RETURNS BOOLEAN
+    DEFINE r BOOLEAN
+    MENU tit ATTRIBUTES(STYLE="dialog",COMMENT=msg)
+        COMMAND "Yes" LET r = TRUE
+        COMMAND "No"  LET r = FALSE
+    END MENU
+    RETURN r
+END FUNCTION
+
 PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     DEFINE hasAddr BOOLEAN
+    DEFINE x SMALLINT
     LET hasAddr = (LENGTH(inforec.address)>0)
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
     CALL d.setActionActive("startscan",  fglcdvBluetoothLE.canStartScan())
     CALL d.setActionActive("stopscan",   fglcdvBluetoothLE.canStopScan())
-    CALL d.setActionActive("connect",    hasAddr AND fglcdvBluetoothLE.canConnect())
-    CALL d.setActionActive("close",      hasAddr AND fglcdvBluetoothLE.canClose())
+    CALL d.setActionActive("connect",    hasAddr AND fglcdvBluetoothLE.canConnect(inforec.address))
+    CALL d.setActionActive("close",      hasAddr AND fglcdvBluetoothLE.canClose(inforec.address))
     LET inforec.infomsg = 
       SFMT("Initialization status: %1\n",
             fglcdvBluetoothLE.initializationStatusToString(
@@ -185,11 +192,18 @@ PRIVATE FUNCTION setup_dialog(d ui.Dialog)
                fglcdvBluetoothLE.getScanStatus()
             )
           ),
-      SFMT("Connection status: %1\n",
-            fglcdvBluetoothLE.connectStatusToString(
-               fglcdvBluetoothLE.getConnectStatus()
-            )
+      IIF( LENGTH(inforec.address)==0, "",
+          SFMT("Connection status: %1\n",
+                 fglcdvBluetoothLE.connectStatusToString(
+                    fglcdvBluetoothLE.getConnectStatus(inforec.address)
+                 )
           )
+      ),
+      "----"
+      FOR x=1 TO addrCombobox.getItemCount()
+          LET inforec.infomsg =
+              inforec.infomsg.append("\n"||addrCombobox.getItemText(x))
+      END FOR
 END FUNCTION
 
 PRIVATE FUNCTION showBgEvents()
@@ -225,7 +239,7 @@ PRIVATE FUNCTION showScanResults()
   DEFINE x, cnt INTEGER
   DEFINE disparr DYNAMIC ARRAY OF RECORD
                  address STRING,
-                 timestamp DATETIME YEAR TO FRACTION(3)
+                 timestamp STRING -- GMI bug... DATETIME YEAR TO FRACTION(3)
              END RECORD
   CALL fglcdvBluetoothLE.getScanResults( resarr )
   IF resarr.getLength() == 0 THEN
@@ -233,7 +247,12 @@ PRIVATE FUNCTION showScanResults()
       RETURN
   END IF
   FOR x=1 TO resarr.getLength()
-      LET disparr[x].address = resarr[x].address
+      IF resarr[x].name IS NOT NULL THEN
+          LET disparr[x].address = SFMT("%1 (%2...)",
+              resarr[x].name, resarr[x].address.subString(1,5))
+      ELSE
+          LET disparr[x].address = resarr[x].address
+      END IF
       LET disparr[x].timestamp = resarr[x].timestamp
   END FOR
   OPEN WINDOW w2 WITH FORM "scanres"
@@ -248,7 +267,7 @@ PRIVATE FUNCTION showScanResults()
         ELSE
            LET info = util.JSON.stringify(resarr[arr_count()].ad.ios)
         END IF
-        IF getAddress(disparr[arr_curr()].address,info) THEN
+        IF getAddress(resarr[arr_curr()].address,info) THEN
            EXIT DISPLAY
         END IF
   END DISPLAY
@@ -258,8 +277,7 @@ END FUNCTION
 PRIVATE FUNCTION getAddress(address STRING, info STRING) RETURNS BOOLEAN
   DEFINE saved BOOLEAN
   MENU address ATTRIBUTES(STYLE="dialog",COMMENT=info)
-    COMMAND "Save address"
-      CALL addAddressToCombobox(address)
+    COMMAND "Select"
       LET inforec.address = address
       LET saved = TRUE
     COMMAND "Ok"
@@ -268,14 +286,15 @@ PRIVATE FUNCTION getAddress(address STRING, info STRING) RETURNS BOOLEAN
   RETURN saved
 END FUNCTION
 
-PRIVATE FUNCTION addAddressToCombobox(address STRING)
-  DEFINE x SMALLINT
-  FOR x=1 TO addrCombobox.getItemCount()
-      IF addrCombobox.getItemName(x) == address THEN
-         RETURN
+PRIVATE FUNCTION fillAddressCombobox()
+  DEFINE resarr fglcdvBluetoothLE.ScanResultArrayT
+  DEFINE x, cnt INTEGER
+  CALL fglcdvBluetoothLE.getNewScanResults( resarr )
+  FOR x=1 TO resarr.getLength()
+      IF addrCombobox.getIndexOf(resarr[x].address) == 0 THEN
+         CALL addrCombobox.addItem(resarr[x].address,resarr[x].name)
       END IF
   END FOR
-  CALL addrCombobox.addItem(address,address)
 END FUNCTION
 
 PRIVATE FUNCTION getFrontEndName()
