@@ -157,6 +157,14 @@ MAIN
        END IF
        CALL setup_dialog(DIALOG)
 
+    ON ACTION discover ATTRIBUTES(TEXT="Discover")
+       IF fglcdvBluetoothLE.discover(inforec.address) >= 0 THEN
+          MESSAGE "BluetoothLE services discovery done."
+       ELSE
+          ERROR "BluetoothLE services discovery failed."
+       END IF
+       CALL setup_dialog(DIALOG)
+
     END INPUT
 
     CALL fglcdvBluetoothLE.fini()
@@ -181,6 +189,7 @@ PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     CALL d.setActionActive("stopscan",   fglcdvBluetoothLE.canStopScan())
     CALL d.setActionActive("connect",    hasAddr AND fglcdvBluetoothLE.canConnect(inforec.address))
     CALL d.setActionActive("close",      hasAddr AND fglcdvBluetoothLE.canClose(inforec.address))
+    CALL d.setActionActive("discover",   hasAddr AND fglcdvBluetoothLE.canDiscover(inforec.address))
     LET inforec.infomsg = 
       SFMT("Initialization status: %1\n",
             fglcdvBluetoothLE.initializationStatusToString(

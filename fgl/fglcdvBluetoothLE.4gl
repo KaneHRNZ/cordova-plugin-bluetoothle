@@ -77,22 +77,64 @@ PUBLIC TYPE ScanOptionsT RECORD
 END RECORD
 PUBLIC DEFINE scanOptions ScanOptionsT
 
-PRIVATE CONSTANT BLUETOOTHLEPLUGIN = "BluetoothLePlugin"
+PUBLIC TYPE PermissionsT RECORD
+        read BOOLEAN,
+        readEncrypted BOOLEAN,
+        readEncryptedMITM BOOLEAN,
+        write BOOLEAN,
+        writeEncrypted BOOLEAN,
+        writeEncryptedMITM BOOLEAN,
+        writeSigned BOOLEAN,
+        writeSignedMITM BOOLEAN,
+        readEncryptionRequired BOOLEAN,
+        writeEncryptionRequired BOOLEAN
+    END RECORD
 
-PRIVATE DEFINE initialized BOOLEAN -- Library initialization status
-PRIVATE DEFINE frontEndName STRING
+PUBLIC TYPE CharacteristicDescriptorT RECORD
+        uuid STRING, -- Also used as dictionary key!
+        permissions PermissionsT
+    END RECORD
+PUBLIC TYPE CharacteristicDescriptorDictT DICTIONARY OF CharacteristicDescriptorT
 
-PRIVATE DEFINE initStatus SMALLINT -- BluetoothLE initialization status
-PRIVATE DEFINE scanStatus SMALLINT
-PRIVATE DEFINE connStatus DICTIONARY OF SMALLINT
-PRIVATE DEFINE callbackIdInitialize STRING
-PRIVATE DEFINE callbackIdScan STRING
-PRIVATE DEFINE callbackIdConnect STRING
-PRIVATE DEFINE callbackIdClose STRING
+PUBLIC TYPE CharacteristicPropertiesT RECORD
+        broadcast BOOLEAN,
+        extendedProperties BOOLEAN,
+        indicate BOOLEAN,
+        notify BOOLEAN,
+        read BOOLEAN,
+        write BOOLEAN,
+        signedWrite BOOLEAN,
+        authenticatedSignedWrites BOOLEAN,
+        writeWithoutResponse BOOLEAN,
+        notifyEncryptionRequired BOOLEAN,
+        indicateEncryptionRequired BOOLEAN
+    END RECORD
 
-PRIVATE DEFINE lastErrInfo util.JSONObject
+PUBLIC TYPE CharacteristicT RECORD
+        uuid STRING, -- Also used as dictionary key!
+        descriptors CharacteristicDescriptorDictT,
+        properties CharacteristicPropertiesT,
+        permissions PermissionsT
+    END RECORD
+PUBLIC TYPE CharacteristicDictT DICTIONARY OF CharacteristicT
 
-PRIVATE DEFINE scanResultsOffset INTEGER
+PUBLIC TYPE ServiceT RECORD
+        uuid STRING, -- Also used as dictionary key!
+        characteristics CharacteristicDictT
+    END RECORD
+PUBLIC TYPE ServiceDictT DICTIONARY OF ServiceT
+
+PUBLIC TYPE DiscoverT RECORD
+        status SMALLINT,
+        name STRING,
+        address STRING,
+        services ServiceDictT
+    END RECORD
+PUBLIC TYPE discoverDictionaryT DICTIONARY OF DiscoverT
+
+PUBLIC CONSTANT DISCOVER_STATUS_UNDEFINED  = 0
+PUBLIC CONSTANT DISCOVER_STATUS_DISCOVERED = 1
+PUBLIC CONSTANT DISCOVER_STATUS_FAILED     = 2
 
 -- Structure that covers Android and iOS scan result JSON records
 PUBLIC TYPE ScanResultT RECORD
@@ -117,9 +159,30 @@ PUBLIC TYPE ScanResultT RECORD
         address STRING
     END RECORD
 PUBLIC TYPE ScanResultArrayT DYNAMIC ARRAY OF ScanResultT
-PRIVATE DEFINE scanResultArray ScanResultArrayT
 
+
+PRIVATE CONSTANT BLUETOOTHLEPLUGIN = "BluetoothLePlugin"
 PRIVATE DEFINE ts DATETIME HOUR TO FRACTION(5)
+
+PRIVATE DEFINE initialized BOOLEAN -- Library initialization status
+PRIVATE DEFINE frontEndName STRING
+
+PRIVATE DEFINE initStatus SMALLINT -- BluetoothLE initialization status
+PRIVATE DEFINE scanStatus SMALLINT
+PRIVATE DEFINE connStatus DICTIONARY OF SMALLINT
+
+PRIVATE DEFINE callbackIdInitialize STRING
+PRIVATE DEFINE callbackIdScan STRING
+PRIVATE DEFINE callbackIdConnect STRING
+PRIVATE DEFINE callbackIdClose STRING
+
+PRIVATE DEFINE lastErrInfo util.JSONObject
+
+PRIVATE DEFINE scanResultArray ScanResultArrayT
+PRIVATE DEFINE scanResultsOffset INTEGER
+
+PRIVATE DEFINE discResultDict DiscoverDictionaryT
+
 
 #+ Initializes the plugin library
 #+
@@ -133,6 +196,7 @@ PUBLIC FUNCTION init()
 
     -- Init Options
     LET initOptions.request=TRUE
+    LET initOptions.statusReceiver=TRUE
 
     -- Scan Options
     CALL scanOptions.services.clear()
@@ -627,11 +691,11 @@ PUBLIC FUNCTION clearCallbackBuffer()
     CALL bgEvents.clear()
 END FUNCTION
 
-PUBLIC FUNCTION getScanResults( sra DYNAMIC ARRAY OF ScanResultT )
+PUBLIC FUNCTION getScanResults( sra ScanResultArrayT )
     CALL scanResultArray.copyTo( sra )
 END FUNCTION
 
-PUBLIC FUNCTION getNewScanResults( sra DYNAMIC ARRAY OF ScanResultT )
+PUBLIC FUNCTION getNewScanResults( sra ScanResultArrayT )
     DEFINE i, x, len INTEGER
     CALL sra.clear()
     IF scanResultsOffset <= 0 THEN RETURN END IF
@@ -741,4 +805,152 @@ PUBLIC FUNCTION canClose(address STRING)
     ELSE
         RETURN FALSE
     END IF
+END FUNCTION
+
+PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALLINT
+    DEFINE ro, so, co, do, po util.JSONObject
+    DEFINE sa, ca, da util.JSONArray
+    DEFINE i, j, k INTEGER
+    DEFINE s_uuid, c_uuid, d_uuid STRING
+    LET discResultDict[address].address = NULL
+    LET discResultDict[address].name = NULL
+    CALL discResultDict[address].services.clear()
+    TRY
+        LET ro = util.JSONObject.parse(result) -- Discover object
+    CATCH
+        CALL _fatalError("Invalid JSON string for discover result.")
+    END TRY
+    IF ro.get("status") == "discovered" THEN
+        LET discResultDict[address].status = DISCOVER_STATUS_DISCOVERED
+        LET discResultDict[address].address = ro.get("address")
+        LET discResultDict[address].name = ro.get("name")
+        LET sa = ro.get("services") -- Services array
+        IF sa IS NOT NULL THEN
+            FOR i = 1 TO sa.getLength()
+                LET so = sa.get(i) -- Service object
+                LET s_uuid = so.get("uuid")
+                LET discResultDict[address].services[s_uuid].uuid = s_uuid
+                LET ca = so.get("characteristics") -- Characteristic array
+                IF ca IS NOT NULL THEN
+                    FOR j = 1 TO ca.getLength()
+                        LET co = ca.get(j) -- Characteristic object
+                        IF co IS NOT NULL THEN
+                            LET c_uuid = co.get("uuid")
+                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].uuid = c_uuid
+                            LET po = co.get("properties")
+                            IF po IS NOT NULL THEN
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.broadcast = po.get("broadcast")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.extendedProperties = po.get("extendedProperties")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.indicate = po.get("indicate")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.notify = po.get("notify")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.read = po.get("read")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.write = po.get("write")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.signedWrite = po.get("signedWrite")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.authenticatedSignedWrites = po.get("authenticatedSignedWrites")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.writeWithoutResponse = po.get("writeWithoutResponse")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.notifyEncryptionRequired = po.get("notifyEncryptionRequired")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].properties.indicateEncryptionRequired = po.get("indicateEncryptionRequired")
+                            END IF
+                            LET po = co.get("permissions")
+                            IF po IS NOT NULL THEN
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.read = po.get("read")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.readEncrypted = po.get("readEncrypted")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.readEncryptedMITM = po.get("readEncryptedMITM")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.write = po.get("write")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.writeEncrypted = po.get("writeEncrypted")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.writeEncryptedMITM = po.get("writeEncryptedMITM")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.writeSigned = po.get("writeSigned")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.writeSignedMITM = po.get("writeSignedMITM")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.readEncryptionRequired = po.get("readEncryptionRequired")
+                                LET discResultDict[address].services[s_uuid].characteristics[c_uuid].permissions.writeEncryptionRequired = po.get("writeEncryptionRequired")
+                            END IF
+                            LET da = co.get("descriptors") -- Descriptors array (of strings)
+                            IF da IS NOT NULL THEN
+                                FOR k = 1 TO da.getLength()
+                                    LET do = da.get(k) -- Descriptor object
+                                    IF do IS NOT NULL THEN
+                                        LET d_uuid = do.get("uuid")
+                                        LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].uuid = d_uuid
+                                        LET po = do.get("permissions")
+                                        IF po IS NOT NULL THEN
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.read = po.get("read")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.readEncrypted = po.get("readEncrypted")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.readEncryptedMITM = po.get("readEncryptedMITM")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.write = po.get("write")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.writeEncrypted = po.get("writeEncrypted")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.writeEncryptedMITM = po.get("writeEncryptedMITM")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.writeSigned = po.get("writeSigned")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.writeSignedMITM = po.get("writeSignedMITM")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.readEncryptionRequired = po.get("readEncryptionRequired")
+                                            LET discResultDict[address].services[s_uuid].characteristics[c_uuid].descriptors[d_uuid].permissions.writeEncryptionRequired = po.get("writeEncryptionRequired")
+                                        END IF
+                                    END IF
+                                END FOR
+                            END IF
+                        END IF
+                    END FOR
+                END IF
+            END FOR
+        END IF
+display "discovery result = ", util.JSON.format( util.JSON.stringify( discResultDict[address] ) )
+    ELSE
+        LET discResultDict[address].status = DISCOVER_STATUS_FAILED
+        RETURN -3
+    END IF
+    RETURN 0
+END FUNCTION
+
+PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING,
+               clearCache BOOLEAN
+           END RECORD
+    DEFINE result STRING
+    DEFINE s SMALLINT
+    CALL _check_lib_state(1)
+    IF NOT canDiscover(address) THEN
+       RETURN -2
+    END IF
+    LET params.address = address
+    LET params.clearCache = FALSE -- Default, Android only.
+    TRY
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN,"discover",params],
+                [result])
+        IF (s := _saveDiscoveryData(address, result)) < 0 THEN
+            RETURN s
+        END IF
+    CATCH
+        CALL _debug_error()
+        RETURN -1
+    END TRY
+    RETURN 0
+END FUNCTION
+
+PUBLIC FUNCTION canDiscover(address STRING)
+    CALL _check_lib_state(0)
+    IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
+    IF connStatus.contains(address) THEN
+        RETURN (connStatus[address] == CONNECT_STATUS_CONNECTED)
+    ELSE
+        RETURN FALSE
+    END IF
+END FUNCTION
+
+PUBLIC FUNCTION getDiscoveryResults(drd DiscoverDictionaryT)
+    CALL discResultDict.copyTo( drd )
+END FUNCTION
+
+PUBLIC FUNCTION getDiscoveryStatus(address STRING) RETURNS SMALLINT
+    IF discResultDict.contains(address) THEN
+        RETURN discResultDict[address].status
+    END IF
+    RETURN DISCOVER_STATUS_UNDEFINED
+END FUNCTION
+
+PUBLIC FUNCTION getDiscoveryName(address STRING) RETURNS STRING
+    IF discResultDict.contains(address) THEN
+        RETURN discResultDict[address].name
+    END IF
+    RETURN NULL
 END FUNCTION
