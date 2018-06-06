@@ -11,12 +11,16 @@ IMPORT util
 IMPORT FGL fgldialog
 IMPORT FGL fglcdvBluetoothLE
 
-PRIVATE DEFINE inforec RECORD
+DEFINE inforec RECORD
         address STRING,
+        service STRING,
+        characteristic STRING,
         infomsg STRING
     END RECORD
 
-PRIVATE DEFINE addrCombobox ui.ComboBox
+DEFINE addrCombobox ui.ComboBox
+
+DEFINE discResults fglcdvBluetoothLE.DiscoverDictionaryT
 
 --we just check if we can call some of the core functions
 --in this plugin (scanning the neighbourhood)
@@ -165,11 +169,23 @@ MAIN
        END IF
        CALL setup_dialog(DIALOG)
 
+    ON ACTION showdisc ATTRIBUTES(TEXT="Show discovery result")
+       CALL fglcdvBluetoothLE.getDiscoveryResults(discResults)
+       IF discResults.contains(inforec.address) THEN
+          CALL show_text( util.JSON.format(util.JSON.stringify(discResults[inforec.address])) )
+       END IF
+
     END INPUT
 
     CALL fglcdvBluetoothLE.fini()
 
 END MAIN
+
+PRIVATE FUNCTION show_text(textinfo STRING)
+    OPEN WINDOW wtx WITH FORM "textinfo"
+    INPUT BY NAME textinfo WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE)
+    CLOSE WINDOW wtx
+END FUNCTION
 
 PRIVATE FUNCTION mbox_yn(tit STRING, msg STRING) RETURNS BOOLEAN
     DEFINE r BOOLEAN
@@ -183,6 +199,7 @@ END FUNCTION
 PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     DEFINE hasAddr BOOLEAN
     DEFINE x SMALLINT
+    DEFINE addr, name STRING
     LET hasAddr = (LENGTH(inforec.address)>0)
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
     CALL d.setActionActive("startscan",  fglcdvBluetoothLE.canStartScan())
@@ -190,7 +207,8 @@ PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     CALL d.setActionActive("connect",    hasAddr AND fglcdvBluetoothLE.canConnect(inforec.address))
     CALL d.setActionActive("close",      hasAddr AND fglcdvBluetoothLE.canClose(inforec.address))
     CALL d.setActionActive("discover",   hasAddr AND fglcdvBluetoothLE.canDiscover(inforec.address))
-    LET inforec.infomsg = 
+    CALL d.setActionActive("showdisc",   hasAddr AND fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)==DISCOVER_STATUS_DISCOVERED)
+    LET inforec.infomsg =
       SFMT("Initialization status: %1\n",
             fglcdvBluetoothLE.initializationStatusToString(
                fglcdvBluetoothLE.getInitializationStatus()
@@ -210,8 +228,14 @@ PRIVATE FUNCTION setup_dialog(d ui.Dialog)
       ),
       "----"
       FOR x=1 TO addrCombobox.getItemCount()
-          LET inforec.infomsg =
-              inforec.infomsg.append("\n"||addrCombobox.getItemText(x))
+          LET addr = addrCombobox.getItemName(x)
+          LET name = addrCombobox.getItemText(x)
+          LET inforec.infomsg = inforec.infomsg.append(
+                  SFMT("\n %1 (%2) : conn=%3 / disc=%4",
+                       addr, IIF(name!=addr,name,"?"),
+                       fglcdvBluetoothLE.canDiscover(addr),
+                       fglcdvBluetoothLE.getDiscoveryStatus(addr) )
+              )
       END FOR
 END FUNCTION
 

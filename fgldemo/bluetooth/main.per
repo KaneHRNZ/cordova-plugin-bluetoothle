@@ -1,4 +1,4 @@
-LAYOUT (TEXT="Cordova Bluetooth Demo")
+LAYOUT (TEXT="Cordova BluetoothLE Demo")
 GRID
 {
 [binit                                ]
@@ -6,7 +6,10 @@ GRID
 [bresl                                ]
 [faddr                                ]
 [bconn             |bclos             ]
-[bdisc                                ]
+[bdisc             |bshds             ]
+[fserv                                ]
+[fchar                                ]
+[bsubs             |bunsb             ]
 [bevts                                ]
 [binfo                                ]
 [finfo                                ]
@@ -25,6 +28,11 @@ BUTTON bresl : showresults, TEXT="Show all scan results";
 BUTTON bconn : connect, TEXT="Connect";
 BUTTON bclos : close, TEXT="Close";
 BUTTON bdisc : discover, TEXT="Discover";
+COMBOBOX fserv = FORMONLY.service, PLACEHOLDER="BLE service UUID";
+COMBOBOX fchar = FORMONLY.characteristic, PLACEHOLDER="BLE characteristic UUID";
+BUTTON bshds : showdisc, TEXT="Show data";
+BUTTON bsubs : subscribe, TEXT="Subscribe";
+BUTTON bunsb : unsubscribe, TEXT="Unsubscribe";
 BUTTON bevts : showevents, TEXT="Show background events";
 BUTTON binfo : queryinfo, TEXT="Query info";
 TEXTEDIT finfo = FORMONLY.infomsg, STRETCH=BOTH;

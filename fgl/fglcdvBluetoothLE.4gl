@@ -65,6 +65,14 @@ PUBLIC CONSTANT CONNECT_STATUS_DISCONNECTED = 3
 PUBLIC CONSTANT CONNECT_STATUS_CLOSED       = 4
 PUBLIC CONSTANT CONNECT_STATUS_FAILED       = 5
 
+PUBLIC CONSTANT SUBSCRIBE_STATUS_NOT_READY    = 0
+PUBLIC CONSTANT SUBSCRIBE_STATUS_READY        = 1
+PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBING  = 2
+PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBED   = 3
+PUBLIC CONSTANT SUBSCRIBE_STATUS_UNSUBSCRIBED = 4
+PUBLIC CONSTANT SUBSCRIBE_STATUS_FAILED       = 5
+PUBLIC CONSTANT SUBSCRIBE_STATUS_RESULTS      = 6
+
 PUBLIC TYPE ScanOptionsT RECORD
   services DYNAMIC ARRAY OF STRING,
   -- iOS
@@ -94,7 +102,7 @@ PUBLIC TYPE CharacteristicDescriptorT RECORD
         uuid STRING, -- Also used as dictionary key!
         permissions PermissionsT
     END RECORD
-PUBLIC TYPE CharacteristicDescriptorDictT DICTIONARY OF CharacteristicDescriptorT
+PUBLIC TYPE CharacteristicDescriptorDictionaryT DICTIONARY OF CharacteristicDescriptorT
 
 PUBLIC TYPE CharacteristicPropertiesT RECORD
         broadcast BOOLEAN,
@@ -112,25 +120,25 @@ PUBLIC TYPE CharacteristicPropertiesT RECORD
 
 PUBLIC TYPE CharacteristicT RECORD
         uuid STRING, -- Also used as dictionary key!
-        descriptors CharacteristicDescriptorDictT,
+        descriptors CharacteristicDescriptorDictionaryT,
         properties CharacteristicPropertiesT,
         permissions PermissionsT
     END RECORD
-PUBLIC TYPE CharacteristicDictT DICTIONARY OF CharacteristicT
+PUBLIC TYPE CharacteristicDictionaryT DICTIONARY OF CharacteristicT
 
 PUBLIC TYPE ServiceT RECORD
         uuid STRING, -- Also used as dictionary key!
-        characteristics CharacteristicDictT
+        characteristics CharacteristicDictionaryT
     END RECORD
-PUBLIC TYPE ServiceDictT DICTIONARY OF ServiceT
+PUBLIC TYPE ServiceDictionaryT DICTIONARY OF ServiceT
 
 PUBLIC TYPE DiscoverT RECORD
         status SMALLINT,
         name STRING,
         address STRING,
-        services ServiceDictT
+        services ServiceDictionaryT
     END RECORD
-PUBLIC TYPE discoverDictionaryT DICTIONARY OF DiscoverT
+PUBLIC TYPE DiscoverDictionaryT DICTIONARY OF DiscoverT
 
 PUBLIC CONSTANT DISCOVER_STATUS_UNDEFINED  = 0
 PUBLIC CONSTANT DISCOVER_STATUS_DISCOVERED = 1
@@ -153,12 +161,21 @@ PUBLIC TYPE ScanResultT RECORD
                serviceData util.JSONObject,
                localName STRING
            END RECORD
-        END RECORD,
-        rssi INTEGER,
-        name STRING,
-        address STRING
+       END RECORD,
+       rssi INTEGER,
+       name STRING,
+       address STRING
     END RECORD
 PUBLIC TYPE ScanResultArrayT DYNAMIC ARRAY OF ScanResultT
+
+PUBLIC TYPE SubscribeResultT RECORD
+       timestamp DATETIME YEAR TO FRACTION(3),
+       address STRING,
+       service STRING,
+       characteristic STRING,
+       value STRING
+    END RECORD
+PUBLIC TYPE SubscribeResultArrayT DYNAMIC ARRAY OF SubscribeResultT
 
 
 PRIVATE CONSTANT BLUETOOTHLEPLUGIN = "BluetoothLePlugin"
@@ -170,11 +187,13 @@ PRIVATE DEFINE frontEndName STRING
 PRIVATE DEFINE initStatus SMALLINT -- BluetoothLE initialization status
 PRIVATE DEFINE scanStatus SMALLINT
 PRIVATE DEFINE connStatus DICTIONARY OF SMALLINT
+PRIVATE DEFINE subsStatus DICTIONARY OF SMALLINT
 
 PRIVATE DEFINE callbackIdInitialize STRING
 PRIVATE DEFINE callbackIdScan STRING
 PRIVATE DEFINE callbackIdConnect STRING
 PRIVATE DEFINE callbackIdClose STRING
+PRIVATE DEFINE callbackIdSubscribe DICTIONARY OF STRING
 
 PRIVATE DEFINE lastErrInfo util.JSONObject
 
@@ -183,6 +202,7 @@ PRIVATE DEFINE scanResultsOffset INTEGER
 
 PRIVATE DEFINE discResultDict DiscoverDictionaryT
 
+PRIVATE DEFINE subsResultArray SubscribeResultArrayT
 
 #+ Initializes the plugin library
 #+
@@ -224,6 +244,8 @@ PUBLIC FUNCTION fini()
         CALL scanOptions.services.clear()
         CALL bgEvents.clear()
         CALL scanResultArray.clear()
+        CALL discResultDict.clear()
+        CALL subsResultArray.clear()
         LET initialized = FALSE
     END IF
 END FUNCTION
@@ -320,13 +342,14 @@ END FUNCTION
 #+
 #+ @return <0 if error. Otherwise, the number of callback data fetched.
 PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
-    DEFINE cnt, tot INTEGER
+    DEFINE cnt, tot, x INTEGER
+    DEFINE sks DYNAMIC ARRAY OF STRING
 
 display "processCallbackEvents:"
 
     LET tot = 0
 
-    LET cnt = _fetchCallbackEvents(callbackIdInitialize)
+    LET cnt = _fetchCallbackEvents("initialize", callbackIdInitialize)
     IF cnt<0 THEN
         LET initStatus = INIT_STATUS_FAILED
         RETURN cnt
@@ -334,7 +357,7 @@ display "processCallbackEvents:"
         LET tot = tot + cnt
     END IF
 
-    LET cnt = _fetchCallbackEvents(callbackIdScan)
+    LET cnt = _fetchCallbackEvents("scan", callbackIdScan)
     IF cnt<0 THEN
         LET scanStatus = SCAN_STATUS_FAILED
         RETURN cnt
@@ -342,7 +365,7 @@ display "processCallbackEvents:"
         LET tot = tot + cnt
     END IF
 
-    LET cnt = _fetchCallbackEvents(callbackIdConnect)
+    LET cnt = _fetchCallbackEvents("connect", callbackIdConnect)
     IF cnt<0 THEN
         IF lastErrInfo IS NOT NULL THEN
             IF lastErrInfo.get("error")=="connect" THEN
@@ -354,7 +377,7 @@ display "processCallbackEvents:"
         LET tot = tot + cnt
     END IF
 
-    LET cnt = _fetchCallbackEvents(callbackIdClose)
+    LET cnt = _fetchCallbackEvents("close", callbackIdClose)
     IF cnt<0 THEN
         IF lastErrInfo IS NOT NULL THEN
             IF lastErrInfo.get("error")=="close" THEN
@@ -366,14 +389,30 @@ display "processCallbackEvents:"
         LET tot = tot + cnt
     END IF
 
+    LET sks = subsStatus.getKeys()
+    FOR x=1 TO sks.getLength()
+        LET cnt = _fetchCallbackEvents("subscribe", callbackIdSubscribe[sks[x]])
+        IF cnt<0 THEN
+            IF lastErrInfo IS NOT NULL THEN
+                IF lastErrInfo.get("error")=="subscribe" THEN
+                    LET subsStatus[sks[x]] = SUBSCRIBE_STATUS_FAILED
+                END IF
+            END IF
+            RETURN cnt
+        ELSE
+            LET tot = tot + cnt
+        END IF
+    END FOR
+
     RETURN tot
+
 END FUNCTION
 
-PRIVATE FUNCTION _fetchCallbackEvents(callbackId STRING) RETURNS INTEGER
+PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS INTEGER
     DEFINE len, cnt, x, idx, s INTEGER
     DEFINE jsonResult util.JSONObject
     DEFINE jsonArray util.JSONArray
-    DEFINE addr STRING
+    DEFINE addr, serv, chrc, sk STRING
 
     IF callbackId IS NULL THEN RETURN 0 END IF
 
@@ -390,8 +429,8 @@ PRIVATE FUNCTION _fetchCallbackEvents(callbackId STRING) RETURNS INTEGER
         LET bgEvents[idx].callbackId = callbackId
         LET bgEvents[idx].result     = jsonResult.toString()
 display "  process result:", bgEvents[idx].result
-        CASE
-        WHEN callbackId == callbackIdInitialize
+        CASE what
+        WHEN "initialize"
             CASE jsonResult.get("status")
             WHEN "enabled"
                 LET initStatus = INIT_STATUS_ENABLED
@@ -400,7 +439,7 @@ display "  process result:", bgEvents[idx].result
                 LET initStatus = INIT_STATUS_FAILED
                 LET scanStatus = SCAN_STATUS_NOT_READY
             END CASE
-        WHEN callbackId == callbackIdScan
+        WHEN "scan"
             CASE jsonResult.get("status")
             WHEN "scanStarted"
                 LET scanStatus = SCAN_STATUS_STARTED
@@ -410,30 +449,43 @@ display "  process result:", bgEvents[idx].result
             OTHERWISE
                 LET scanStatus = SCAN_STATUS_FAILED
             END CASE
-        WHEN callbackId == callbackIdConnect
-           LET addr = jsonResult.get("address")
-           IF addr IS NULL THEN
-               CALL _fatalError("address field is null.")
-           END IF
-           CASE jsonResult.get("status")
-           WHEN "connected"
-               LET connStatus[addr] = CONNECT_STATUS_CONNECTED
-           WHEN "disconnected"
-               LET connStatus[addr] = CONNECT_STATUS_DISCONNECTED
-           OTHERWISE
-               LET connStatus[addr] = CONNECT_STATUS_FAILED
-           END CASE
-        WHEN callbackId == callbackIdClose
-           LET addr = jsonResult.get("address")
-           IF addr IS NULL THEN
-               CALL _fatalError("address field is null.")
-           END IF
-           CASE jsonResult.get("status")
-           WHEN "closed"
-               LET connStatus[addr] = CONNECT_STATUS_CLOSED
-           OTHERWISE
-               LET connStatus[addr] = CONNECT_STATUS_FAILED
-           END CASE
+        WHEN "connect"
+            LET addr = jsonResult.get("address")
+            IF addr IS NULL THEN CALL _fatalError("connect result: address field is null.") END IF
+            CASE jsonResult.get("status")
+            WHEN "connected"
+                LET connStatus[addr] = CONNECT_STATUS_CONNECTED
+            WHEN "disconnected"
+                LET connStatus[addr] = CONNECT_STATUS_DISCONNECTED
+            OTHERWISE
+                LET connStatus[addr] = CONNECT_STATUS_FAILED
+            END CASE
+        WHEN "close"
+            LET addr = jsonResult.get("address")
+            IF addr IS NULL THEN CALL _fatalError("close result: address field is null.") END IF
+            CASE jsonResult.get("status")
+            WHEN "closed"
+                LET connStatus[addr] = CONNECT_STATUS_CLOSED
+            OTHERWISE
+                LET connStatus[addr] = CONNECT_STATUS_FAILED
+            END CASE
+        WHEN "subscribe"
+            LET addr = jsonResult.get("address")
+            IF addr IS NULL THEN CALL _fatalError("subscribe result: address field is null.") END IF
+            LET serv = jsonResult.get("service")
+            IF serv IS NULL THEN CALL _fatalError("subscribe result: service field is null.") END IF
+            LET chrc = jsonResult.get("characteristic")
+            IF chrc IS NULL THEN CALL _fatalError("subscribe result: characteristic field is null.") END IF
+            LET sk = _subsKey(addr,serv,chrc)
+            CASE jsonResult.get("status")
+            WHEN "subscribed"
+                LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBED
+            WHEN "subscribedResult"
+                LET subsStatus[sk] = SUBSCRIBE_STATUS_RESULTS
+                LET s = _addSubsResult(jsonResult)
+            OTHERWISE
+                LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
+            END CASE
         END CASE
     END FOR
     RETURN cnt
@@ -467,11 +519,32 @@ PRIVATE FUNCTION _addScanResult(jsonResult util.JSONObject) RETURNS SMALLINT
        LET res.ad.ios.serviceData = jobj.get("serviceData") -- variable structure
     END IF
 
-    LET x = scanResultArray.getLength()+1
-    LET scanResultArray[x].* = res.*
-
-    -- FIXME? What is mandatory?
     IF res.address IS NOT NULL THEN
+        LET x = scanResultArray.getLength()+1
+        LET scanResultArray[x].* = res.*
+        RETURN 0
+    ELSE
+        RETURN -1
+    END IF
+
+END FUNCTION
+
+PRIVATE FUNCTION _addSubsResult(jsonResult util.JSONObject) RETURNS SMALLINT
+    DEFINE x INTEGER
+    DEFINE res SubscribeResultT
+
+    LET res.timestamp = CURRENT
+    LET res.address = jsonResult.get("address")
+    LET res.service = jsonResult.get("service")
+    LET res.characteristic = jsonResult.get("characteristic")
+    LET res.value = jsonResult.get("value")
+
+    IF res.address IS NOT NULL
+    AND res.service IS NOT NULL
+    AND res.characteristic IS NOT NULL
+    THEN
+        LET x = subsResultArray.getLength()+1
+        LET subsResultArray[x].* = res.*
         RETURN 0
     ELSE
         RETURN -1
@@ -812,6 +885,7 @@ PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALL
     DEFINE sa, ca, da util.JSONArray
     DEFINE i, j, k INTEGER
     DEFINE s_uuid, c_uuid, d_uuid STRING
+    DEFINE sk STRING
     LET discResultDict[address].address = NULL
     LET discResultDict[address].name = NULL
     CALL discResultDict[address].services.clear()
@@ -836,6 +910,8 @@ PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALL
                         LET co = ca.get(j) -- Characteristic object
                         IF co IS NOT NULL THEN
                             LET c_uuid = co.get("uuid")
+                            LET sk = _subsKey(address,s_uuid,c_uuid)
+                            LET subsStatus[sk] = SUBSCRIBE_STATUS_READY
                             LET discResultDict[address].services[s_uuid].characteristics[c_uuid].uuid = c_uuid
                             LET po = co.get("properties")
                             IF po IS NOT NULL THEN
@@ -953,4 +1029,88 @@ PUBLIC FUNCTION getDiscoveryName(address STRING) RETURNS STRING
         RETURN discResultDict[address].name
     END IF
     RETURN NULL
+END FUNCTION
+
+PRIVATE FUNCTION _subsKey(address STRING, service STRING, characteristic STRING)
+    RETURN (address||"/"||service||"/"||characteristic)
+END FUNCTION
+
+PUBLIC FUNCTION canSubscribe(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
+    DEFINE sk STRING
+    LET sk = _subsKey(address, service, characteristic)
+    IF subsStatus.contains(sk) THEN
+        RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_READY
+              OR subsStatus[sk] == SUBSCRIBE_STATUS_FAILED )
+    END IF
+    RETURN FALSE
+END FUNCTION
+
+PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING,
+               service STRING,
+               characteristic STRING
+           END RECORD
+    DEFINE sk STRING
+    CALL _check_lib_state(1)
+    IF NOT canSubScribe(address, service, characteristic) THEN
+        RETURN -2
+    END IF
+    LET params.address = address
+    LET params.service = service
+    LET params.characteristic = characteristic
+    TRY
+        LET sk = _subsKey(address, service, characteristic)
+        LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBING
+        CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
+                [BLUETOOTHLEPLUGIN, "subscrcibe", params],
+                [callbackIdSubscribe[sk]])
+display sfmt("subscribe callbackIdSubscribe = %2", callbackIdSubscribe[sk])
+    CATCH
+        CALL _debug_error()
+        RETURN -1
+    END TRY
+    RETURN 0
+END FUNCTION
+
+PUBLIC FUNCTION canUnsubscribe(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
+    DEFINE sk STRING
+    LET sk = _subsKey(address, service, characteristic)
+    IF subsStatus.contains(sk) THEN
+        RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBING
+              OR subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBED
+              OR subsStatus[sk] == SUBSCRIBE_STATUS_RESULTS)
+    END IF
+    RETURN FALSE
+END FUNCTION
+
+PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING,
+               service STRING,
+               characteristic STRING
+           END RECORD
+    DEFINE result, sk STRING
+    DEFINE jsonResult util.JSONObject
+    CALL _check_lib_state(1)
+    IF NOT canUnsubscribe(address,service,characteristic) THEN
+       RETURN -2
+    END IF
+    LET params.address = address
+    TRY
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN,"unsubscribe",params],
+                [result])
+        LET sk = _subsKey(address, service, characteristic)
+        LET jsonResult = util.jsonObject.parse(result)
+        IF jsonResult.get("status") == "unsubscribed" THEN
+            LET subsStatus[sk] = SUBSCRIBE_STATUS_UNSUBSCRIBED
+        ELSE
+            LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
+        END IF
+    CATCH
+        CALL _debug_error()
+        RETURN -1
+    END TRY
+    RETURN 0
 END FUNCTION
