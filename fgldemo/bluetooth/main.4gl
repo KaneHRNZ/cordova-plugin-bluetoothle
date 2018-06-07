@@ -19,6 +19,8 @@ DEFINE inforec RECORD
     END RECORD
 
 DEFINE addrCombobox ui.ComboBox
+DEFINE servCombobox ui.ComboBox
+DEFINE chrcCombobox ui.ComboBox
 
 DEFINE discResults fglcdvBluetoothLE.DiscoverDictionaryT
 
@@ -38,6 +40,8 @@ MAIN
 
     BEFORE INPUT
       LET addrCombobox = ui.ComboBox.forName("formonly.address")
+      LET servCombobox = ui.ComboBox.forName("formonly.service")
+      LET chrcCombobox = ui.ComboBox.forName("formonly.characteristic")
       --for CALL DIALOG.setActionHidden("cordovacallback",1) -- GMI bug ignoring ATTRIBUTES(DEFAULTVIEW=NO)?
       CALL setup_dialog(DIALOG)
 
@@ -119,8 +123,8 @@ MAIN
           LET inforec.infomsg = SFMT(" %1: cordovacallback action : %2 events processed ",
                        CURRENT HOUR TO FRACTION(3), cnt )
        ELSE
-          LET inforec.infomsg = SFMT(" %1: cordovacallback action : error %2 while processing callback results.",
-                       CURRENT HOUR TO FRACTION(3), cnt )
+          ERROR SFMT(" %1: cordovacallback action :\nerror %2 while processing callback results:\n%3",
+                     CURRENT HOUR TO FRACTION(3), cnt, fglcdvBluetoothLE.getLastErrorMessage() )
        END IF
        LET s2 = fglcdvBluetoothLE.getConnectStatus(inforec.address)
        IF s2 != s AND s2 == CONNECT_STATUS_FAILED THEN
@@ -133,23 +137,39 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION showevents ATTRIBUTES(TEXT="Show background events")
+       CALL showBgEvents() -- Implements cordovacallback action so we must refresh!
        CALL fillAddressCombobox()
-       CALL showBgEvents()
        CALL setup_dialog(DIALOG)
 
-    ON ACTION showresults ATTRIBUTES(TEXT="Show last scan results")
+    ON ACTION showscanres ATTRIBUTES(TEXT="Show last scan results")
        CALL fillAddressCombobox()
-       CALL showScanResults()
+       CALL showScanResults() -- Can select an address so fill combobox before!
+       CALL setup_dialog(DIALOG)
+
+    ON ACTION showsubsres ATTRIBUTES(TEXT="Show subscription results")
+       CALL showSubsResults(inforec.address, inforec.service, inforec.characteristic)
        CALL setup_dialog(DIALOG)
 
     ON CHANGE address
+       CALL fillServiceCombobox(inforec.address)
+       LET inforec.service = servCombobox.getItemName(1) -- May be NULL if empty
+       CALL fillCharacteristicCombobox(inforec.address, inforec.service)
+       LET inforec.characteristic = chrcCombobox.getItemName(1) -- May be NULL if empty
+       CALL setup_dialog(DIALOG)
+
+    ON CHANGE service
+       CALL fillCharacteristicCombobox(inforec.address, inforec.service)
+       LET inforec.characteristic = chrcCombobox.getItemName(1) -- May be NULL if empty
+       CALL setup_dialog(DIALOG)
+
+    ON CHANGE characteristic
        CALL setup_dialog(DIALOG)
 
     ON ACTION connect ATTRIBUTES(TEXT="Connect to address")
        IF fglcdvBluetoothLE.connect(inforec.address) >= 0 THEN
           MESSAGE "BluetoothLE connection asked."
        ELSE
-          ERROR "BluetoothLE connection query failed."
+          ERROR "BluetoothLE connection failed."
        END IF
        CALL setup_dialog(DIALOG)
 
@@ -157,12 +177,15 @@ MAIN
        IF fglcdvBluetoothLE.close(inforec.address) >= 0 THEN
           MESSAGE "BluetoothLE connection close asked."
        ELSE
-          ERROR "BluetoothLE connection close query failed."
+          ERROR "BluetoothLE connection close failed."
        END IF
        CALL setup_dialog(DIALOG)
 
     ON ACTION discover ATTRIBUTES(TEXT="Discover")
        IF fglcdvBluetoothLE.discover(inforec.address) >= 0 THEN
+          -- Call is synchronous, we call fill comboboxes now
+          CALL fillAddressCombobox()
+          CALL fillServiceCombobox(inforec.address)
           MESSAGE "BluetoothLE services discovery done."
        ELSE
           ERROR "BluetoothLE services discovery failed."
@@ -174,6 +197,22 @@ MAIN
        IF discResults.contains(inforec.address) THEN
           CALL show_text( util.JSON.format(util.JSON.stringify(discResults[inforec.address])) )
        END IF
+
+    ON ACTION subscribe ATTRIBUTES(TEXT="Subscribe")
+       IF fglcdvBluetoothLE.subscribe(inforec.address, inforec.service, inforec.characteristic) >= 0 THEN
+          MESSAGE "BluetoothLE service subscription asked."
+       ELSE
+          ERROR "BluetoothLE service subscription failed."
+       END IF
+       CALL setup_dialog(DIALOG)
+
+    ON ACTION unsubscribe ATTRIBUTES(TEXT="Unsubscribe")
+       IF fglcdvBluetoothLE.unsubscribe(inforec.address, inforec.service, inforec.characteristic) >= 0 THEN
+          MESSAGE "BluetoothLE unsubscription done."
+       ELSE
+          MESSAGE "BluetoothLE unsubscription failed."
+       END IF
+       CALL setup_dialog(DIALOG)
 
     END INPUT
 
@@ -197,17 +236,22 @@ PRIVATE FUNCTION mbox_yn(tit STRING, msg STRING) RETURNS BOOLEAN
 END FUNCTION
 
 PRIVATE FUNCTION setup_dialog(d ui.Dialog)
-    DEFINE hasAddr BOOLEAN
     DEFINE x SMALLINT
     DEFINE addr, name STRING
-    LET hasAddr = (LENGTH(inforec.address)>0)
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
     CALL d.setActionActive("startscan",  fglcdvBluetoothLE.canStartScan())
     CALL d.setActionActive("stopscan",   fglcdvBluetoothLE.canStopScan())
-    CALL d.setActionActive("connect",    hasAddr AND fglcdvBluetoothLE.canConnect(inforec.address))
-    CALL d.setActionActive("close",      hasAddr AND fglcdvBluetoothLE.canClose(inforec.address))
-    CALL d.setActionActive("discover",   hasAddr AND fglcdvBluetoothLE.canDiscover(inforec.address))
-    CALL d.setActionActive("showdisc",   hasAddr AND fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)==DISCOVER_STATUS_DISCOVERED)
+    CALL d.setActionActive("connect",    fglcdvBluetoothLE.canConnect(inforec.address))
+    CALL d.setActionActive("close",      fglcdvBluetoothLE.canClose(inforec.address))
+    CALL d.setActionActive("discover",   fglcdvBluetoothLE.canDiscover(inforec.address))
+    CALL d.setActionActive("showdisc",   fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)
+                                            == fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED)
+    CALL d.setActionActive("subscribe",  fglcdvBluetoothLE.canSubscribe(inforec.address,
+                                                                        inforec.service,
+                                                                        inforec.characteristic))
+    CALL d.setActionActive("unsubscribe",fglcdvBluetoothLE.canUnsubscribe(inforec.address,
+                                                                          inforec.service,
+                                                                          inforec.characteristic))
     LET inforec.infomsg =
       SFMT("Initialization status: %1\n",
             fglcdvBluetoothLE.initializationStatusToString(
@@ -223,6 +267,22 @@ PRIVATE FUNCTION setup_dialog(d ui.Dialog)
           SFMT("Connection status: %1\n",
                  fglcdvBluetoothLE.connectStatusToString(
                     fglcdvBluetoothLE.getConnectStatus(inforec.address)
+                 )
+          )
+      ),
+      IIF( LENGTH(inforec.address)==0, "",
+          SFMT("Discovery status: %1\n",
+                 fglcdvBluetoothLE.discoveryStatusToString(
+                    fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)
+                 )
+          )
+      ),
+      IIF( LENGTH(inforec.service)==0, "",
+          SFMT("Subscription status: %1\n",
+                 fglcdvBluetoothLE.subscriptionStatusToString(
+                    fglcdvBluetoothLE.getSubscriptionStatus(inforec.address,
+                                                            inforec.service,
+                                                            inforec.characteristic)
                  )
           )
       ),
@@ -319,15 +379,102 @@ PRIVATE FUNCTION getAddress(address STRING, info STRING) RETURNS BOOLEAN
   RETURN saved
 END FUNCTION
 
+PRIVATE FUNCTION showSubsResults(address STRING, service STRING, characteristic STRING)
+  DEFINE resarr fglcdvBluetoothLE.SubscribeResultArrayT
+  DEFINE info STRING
+  DEFINE x, i, cnt INTEGER
+  DEFINE disparr DYNAMIC ARRAY OF RECORD
+                 value STRING,
+                 timestamp STRING -- GMI bug... DATETIME YEAR TO FRACTION(3)
+             END RECORD
+  IF address IS NULL OR service IS NULL OR characteristic IS NULL THEN
+      ERROR "Not current address, service and characteristic."
+      RETURN
+  END IF
+  CALL fglcdvBluetoothLE.getSubscriptionResults( resarr )
+  IF resarr.getLength() == 0 THEN
+      ERROR "No subscription results to display for current ."
+      RETURN
+  END IF
+  LET i = 0
+  FOR x=1 TO resarr.getLength()
+      IF  resarr[x].address == address
+      AND resarr[x].service == service
+      AND resarr[x].characteristic == characteristic
+      THEN
+          LET i = i + 1
+          LET disparr[i].value     = resarr[x].value
+          LET disparr[i].timestamp = resarr[x].timestamp
+      END IF
+  END FOR
+  OPEN WINDOW w3 WITH FORM "subsres"
+  DISPLAY ARRAY disparr TO scr.* ATTRIBUTES(UNBUFFERED,CANCEL=FALSE)
+     ON ACTION clear ATTRIBUTES(TEXT="Clear")
+        CALL fglcdvBluetoothLE.clearSubscriptionResultBuffer( )
+        MESSAGE "Subscription results cleared"
+        CALL DIALOG.deleteAllRows("scr")
+  END DISPLAY
+  CLOSE WINDOW w3
+END FUNCTION
+
 PRIVATE FUNCTION fillAddressCombobox()
   DEFINE resarr fglcdvBluetoothLE.ScanResultArrayT
   DEFINE x, cnt INTEGER
+  -- Do not clear: we add new scanned adresses...
   CALL fglcdvBluetoothLE.getNewScanResults( resarr )
-  FOR x=1 TO resarr.getLength()
+  LET cnt = resarr.getLength()
+  FOR x=1 TO cnt
       IF addrCombobox.getIndexOf(resarr[x].address) == 0 THEN
+--display "  address: ", resarr[x].address
          CALL addrCombobox.addItem(resarr[x].address,resarr[x].name)
       END IF
   END FOR
+END FUNCTION
+
+PRIVATE FUNCTION fillServiceCombobox(address STRING)
+  DEFINE resdic fglcdvBluetoothLE.DiscoverDictionaryT
+  DEFINE servarr DYNAMIC ARRAY OF STRING
+  DEFINE x, cnt INTEGER
+  LET inforec.service = NULL
+  CALL servCombobox.clear()
+  LET inforec.characteristic = NULL
+  CALL chrcCombobox.clear()
+  IF fglcdvBluetoothLE.getDiscoveryStatus(address)
+        != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
+     RETURN
+  END IF
+  CALL fglcdvBluetoothLE.getDiscoveryResults(resdic)
+  IF resdic.contains(address) THEN
+     LET servarr = resdic[address].services.getKeys()
+     LET cnt = servarr.getLength()
+     FOR x=1 TO cnt
+--display "    service: ", servarr[x]
+         CALL servCombobox.addItem(servarr[x], NULL)
+     END FOR
+  END IF
+END FUNCTION
+
+PRIVATE FUNCTION fillCharacteristicCombobox(address STRING, service STRING)
+  DEFINE resdic fglcdvBluetoothLE.DiscoverDictionaryT
+  DEFINE chrcarr DYNAMIC ARRAY OF STRING
+  DEFINE x, cnt INTEGER
+  LET inforec.characteristic = NULL
+  CALL chrcCombobox.clear()
+  IF fglcdvBluetoothLE.getDiscoveryStatus(address)
+        != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
+     RETURN
+  END IF
+  CALL fglcdvBluetoothLE.getDiscoveryResults(resdic)
+  IF resdic.contains(address) THEN
+     IF resdic[address].services.contains(service) THEN
+        LET chrcarr = resdic[address].services[service].characteristics.getKeys()
+        LET cnt = chrcarr.getLength()
+        FOR x=1 TO cnt
+--display "       characteristic: ", chrcarr[x]
+            CALL chrcCombobox.addItem(chrcarr[x], NULL)
+        END FOR
+     END IF
+  END IF
 END FUNCTION
 
 PRIVATE FUNCTION getFrontEndName()

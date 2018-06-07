@@ -8,16 +8,15 @@
 # purely for information purposes only.
 
 LAYOUT
-LAYOUT
-GRID
+TABLE
 {
-[info            ]
-[                ]
-[                ]
-[                ]
+[val                         |ts                     ]
 }
 END
-END
 ATTRIBUTES
-TEXTEDIT info = FORMONLY.textinfo, STRETCH=BOTH;
+val=FORMONLY.value, SCROLL;
+ts=FORMONLY.timestamp, JUSTIFY=LEFT;
+END
+INSTRUCTIONS
+SCREEN RECORD scr(FORMONLY.*);
 END

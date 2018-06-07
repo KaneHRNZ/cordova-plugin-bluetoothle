@@ -1,15 +1,26 @@
+# Property of Four Js*
+# (c) Copyright Four Js 2017, 2017. All Rights Reserved.
+# * Trademark of Four Js Development Tools Europe Ltd
+#   in the United States and elsewhere
+#
+# Four Js and its suppliers do not warrant or guarantee that these
+# samples are accurate and suitable for your purposes. Their inclusion is
+# purely for information purposes only.
+
+LAYOUT
 LAYOUT (TEXT="Cordova BluetoothLE Demo")
 GRID
 {
 [binit                                ]
 [bscan             |bstop             ]
-[bresl                                ]
+[bshsc                                ]
 [faddr                                ]
 [bconn             |bclos             ]
 [bdisc             |bshds             ]
 [fserv                                ]
 [fchar                                ]
 [bsubs             |bunsb             ]
+[bshsb                                ]
 [bevts                                ]
 [binfo                                ]
 [finfo                                ]
@@ -24,15 +35,16 @@ COMBOBOX faddr = FORMONLY.address, PLACEHOLDER="BLE device address";
 BUTTON binit : initialize, TEXT="Initialize";
 BUTTON bscan : startscan, TEXT="Start Scan";
 BUTTON bstop : stopscan, TEXT="Stop Scan";
-BUTTON bresl : showresults, TEXT="Show all scan results";
+BUTTON bshsc : showscanres, TEXT="Show all scan results";
 BUTTON bconn : connect, TEXT="Connect";
 BUTTON bclos : close, TEXT="Close";
 BUTTON bdisc : discover, TEXT="Discover";
+BUTTON bshds : showdisc, TEXT="Show data";
 COMBOBOX fserv = FORMONLY.service, PLACEHOLDER="BLE service UUID";
 COMBOBOX fchar = FORMONLY.characteristic, PLACEHOLDER="BLE characteristic UUID";
-BUTTON bshds : showdisc, TEXT="Show data";
 BUTTON bsubs : subscribe, TEXT="Subscribe";
 BUTTON bunsb : unsubscribe, TEXT="Unsubscribe";
+BUTTON bshsb : showsubsres, TEXT="Show subscruption results";
 BUTTON bevts : showevents, TEXT="Show background events";
 BUTTON binfo : queryinfo, TEXT="Query info";
 TEXTEDIT finfo = FORMONLY.infomsg, STRETCH=BOTH;

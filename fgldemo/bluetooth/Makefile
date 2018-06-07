@@ -40,7 +40,7 @@ FORMS    = $(patsubst %.per, %.42f, $(wildcard *.per))
 all:: $(MODULES) $(FORMS)
 
 
-main.42m: main.42f bgevents.42f scanres.42f textinfo.42f
+main.42m: main.42f bgevents.42f scanres.42f subsres.42f textinfo.42f
 
 run: main.42m
 	fglrun main

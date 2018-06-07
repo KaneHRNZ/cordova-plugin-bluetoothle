@@ -8,6 +8,15 @@
 
 #+ Genero BDL wrapper around the Cordova Bluetooth Low Energy plugin.
 #+
+#+ Process as central BluetoothLE device:
+#+  1. Initialize
+#+  2. Scan to get addresses
+#+  3. Connect to addresse
+#+  4. Discover services
+#+  5. Subscrine to service + characteristic
+#+  6. Read characteristic data
+#+  7. Unsubscribe
+#+  8. Close connection
 
 IMPORT util
 
@@ -65,7 +74,7 @@ PUBLIC CONSTANT CONNECT_STATUS_DISCONNECTED = 3
 PUBLIC CONSTANT CONNECT_STATUS_CLOSED       = 4
 PUBLIC CONSTANT CONNECT_STATUS_FAILED       = 5
 
-PUBLIC CONSTANT SUBSCRIBE_STATUS_NOT_READY    = 0
+PUBLIC CONSTANT SUBSCRIBE_STATUS_UNDEFINED    = 0
 PUBLIC CONSTANT SUBSCRIBE_STATUS_READY        = 1
 PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBING  = 2
 PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBED   = 3
@@ -195,7 +204,7 @@ PRIVATE DEFINE callbackIdConnect STRING
 PRIVATE DEFINE callbackIdClose STRING
 PRIVATE DEFINE callbackIdSubscribe DICTIONARY OF STRING
 
-PRIVATE DEFINE lastErrInfo util.JSONObject
+PRIVATE DEFINE lastErrorInfo util.JSONObject
 
 PRIVATE DEFINE scanResultArray ScanResultArrayT
 PRIVATE DEFINE scanResultsOffset INTEGER
@@ -310,12 +319,14 @@ PRIVATE FUNCTION _extract_error_info()
         CALL _fatalError("Expecting error -6333.")
     END IF
     LET msg = err_get(STATUS)
+display "*** front call err_get: ", msg
     LET msg = msg.subString(msg.getIndexOf("Reason:",1)+7,msg.getLength())
-display "front call error reason: ", msg
+display "*** front call error reason: ", msg
     TRY
         LET err = util.JSONObject.parse(msg)
     CATCH
-        CALL _fatalError("Could not extract error info.")
+        --CALL _fatalError("Could not extract error info.")
+        LET err = util.JSONObject.parse('{"message":"Unknown error."}')
     END TRY
     RETURN err
 END FUNCTION
@@ -367,9 +378,9 @@ display "processCallbackEvents:"
 
     LET cnt = _fetchCallbackEvents("connect", callbackIdConnect)
     IF cnt<0 THEN
-        IF lastErrInfo IS NOT NULL THEN
-            IF lastErrInfo.get("error")=="connect" THEN
-                LET connStatus[lastErrInfo.get("address")] = CONNECT_STATUS_FAILED
+        IF lastErrorInfo IS NOT NULL THEN
+            IF lastErrorInfo.get("error")=="connect" THEN
+                LET connStatus[lastErrorInfo.get("address")] = CONNECT_STATUS_FAILED
             END IF
         END IF
         RETURN cnt
@@ -379,9 +390,9 @@ display "processCallbackEvents:"
 
     LET cnt = _fetchCallbackEvents("close", callbackIdClose)
     IF cnt<0 THEN
-        IF lastErrInfo IS NOT NULL THEN
-            IF lastErrInfo.get("error")=="close" THEN
-                LET connStatus[lastErrInfo.get("address")] = CONNECT_STATUS_FAILED
+        IF lastErrorInfo IS NOT NULL THEN
+            IF lastErrorInfo.get("error")=="close" THEN
+                LET connStatus[lastErrorInfo.get("address")] = CONNECT_STATUS_FAILED
             END IF
         END IF
         RETURN cnt
@@ -393,8 +404,8 @@ display "processCallbackEvents:"
     FOR x=1 TO sks.getLength()
         LET cnt = _fetchCallbackEvents("subscribe", callbackIdSubscribe[sks[x]])
         IF cnt<0 THEN
-            IF lastErrInfo IS NOT NULL THEN
-                IF lastErrInfo.get("error")=="subscribe" THEN
+            IF lastErrorInfo IS NOT NULL THEN
+                IF lastErrorInfo.get("error")=="subscribe" THEN
                     LET subsStatus[sks[x]] = SUBSCRIBE_STATUS_FAILED
                 END IF
             END IF
@@ -416,7 +427,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
 
     IF callbackId IS NULL THEN RETURN 0 END IF
 
-    CALL _getAllCallbackData(callbackId) RETURNING s, jsonArray, lastErrInfo
+    CALL _getAllCallbackData(callbackId) RETURNING s, jsonArray, lastErrorInfo
     IF s<0 THEN
         RETURN -1
     END IF
@@ -445,7 +456,7 @@ display "  process result:", bgEvents[idx].result
                 LET scanStatus = SCAN_STATUS_STARTED
             WHEN "scanResult"
                 LET scanStatus = SCAN_STATUS_RESULTS
-                LET s = _addScanResult(jsonResult)
+                LET s = _saveScanResult(jsonResult)
             OTHERWISE
                 LET scanStatus = SCAN_STATUS_FAILED
             END CASE
@@ -482,7 +493,7 @@ display "  process result:", bgEvents[idx].result
                 LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBED
             WHEN "subscribedResult"
                 LET subsStatus[sk] = SUBSCRIBE_STATUS_RESULTS
-                LET s = _addSubsResult(jsonResult)
+                LET s = _saveSubsResult(jsonResult)
             OTHERWISE
                 LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
             END CASE
@@ -491,7 +502,19 @@ display "  process result:", bgEvents[idx].result
     RETURN cnt
 END FUNCTION
 
-PRIVATE FUNCTION _addScanResult(jsonResult util.JSONObject) RETURNS SMALLINT
+PUBLIC FUNCTION getLastErrorInfo()
+    RETURN lastErrorInfo
+END FUNCTION
+
+PUBLIC FUNCTION getLastErrorMessage()
+    IF lastErrorInfo IS NOT NULL THEN
+       RETURN lastErrorInfo.get("message")
+    ELSE
+       RETURN NULL
+    END IF
+END FUNCTION
+
+PRIVATE FUNCTION _saveScanResult(jsonResult util.JSONObject) RETURNS SMALLINT
     DEFINE x INTEGER
     DEFINE res ScanResultT
     DEFINE jobj util.JSONObject
@@ -522,29 +545,6 @@ PRIVATE FUNCTION _addScanResult(jsonResult util.JSONObject) RETURNS SMALLINT
     IF res.address IS NOT NULL THEN
         LET x = scanResultArray.getLength()+1
         LET scanResultArray[x].* = res.*
-        RETURN 0
-    ELSE
-        RETURN -1
-    END IF
-
-END FUNCTION
-
-PRIVATE FUNCTION _addSubsResult(jsonResult util.JSONObject) RETURNS SMALLINT
-    DEFINE x INTEGER
-    DEFINE res SubscribeResultT
-
-    LET res.timestamp = CURRENT
-    LET res.address = jsonResult.get("address")
-    LET res.service = jsonResult.get("service")
-    LET res.characteristic = jsonResult.get("characteristic")
-    LET res.value = jsonResult.get("value")
-
-    IF res.address IS NOT NULL
-    AND res.service IS NOT NULL
-    AND res.characteristic IS NOT NULL
-    THEN
-        LET x = subsResultArray.getLength()+1
-        LET subsResultArray[x].* = res.*
         RETURN 0
     ELSE
         RETURN -1
@@ -733,6 +733,7 @@ PUBLIC FUNCTION stopScan() RETURNS INTEGER
        LET scanStatus = SCAN_STATUS_STOPPED
        RETURN 0
     ELSE
+       LET scanStatus = SCAN_STATUS_FAILED
        RETURN -1
     END IF
 END FUNCTION
@@ -857,6 +858,7 @@ END FUNCTION
 PUBLIC FUNCTION canConnect(address STRING)
     CALL _check_lib_state(0)
     IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
+    IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
         RETURN (connStatus[address] == CONNECT_STATUS_FAILED
              OR connStatus[address] == CONNECT_STATUS_CLOSED
@@ -866,18 +868,42 @@ PUBLIC FUNCTION canConnect(address STRING)
     END IF
 END FUNCTION
 
+PUBLIC FUNCTION hasSubscriptions(address STRING) RETURNS BOOLEAN
+    DEFINE arr DYNAMIC ARRAY OF STRING,
+           x,alen,slen INTEGER,
+           addr STRING
+    LET arr = subsStatus.getKeys()
+    LET alen = arr.getLength()
+    LET addr = address||"/"
+    LET slen = addr.getLength()
+    FOR x=1 TO alen
+        IF arr[x].subString(1,slen) == addr THEN
+           RETURN TRUE
+        END IF
+    END FOR
+    RETURN FALSE
+END FUNCTION
+
 PUBLIC FUNCTION canClose(address STRING)
     CALL _check_lib_state(0)
     IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
+    IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
-        RETURN (connStatus[address] == CONNECT_STATUS_CONNECTED
-             -- Next statuses are valid to close for cleanup and connect again.
-             OR connStatus[address] == CONNECT_STATUS_CONNECTING
-             OR connStatus[address] == CONNECT_STATUS_FAILED
-             OR connStatus[address] == CONNECT_STATUS_DISCONNECTED)
-    ELSE
-        RETURN FALSE
+        -- Next statuses are valid to close for cleanup and connect again.
+        IF (connStatus[address] == CONNECT_STATUS_CONNECTING
+         OR connStatus[address] == CONNECT_STATUS_FAILED
+         OR connStatus[address] == CONNECT_STATUS_DISCONNECTED) THEN
+            RETURN TRUE
+        END IF
+        IF connStatus[address] == CONNECT_STATUS_CONNECTED THEN
+            IF hasSubscriptions(address) THEN
+                RETURN FALSE
+            ELSE
+                RETURN TRUE
+            END IF
+        END IF
     END IF
+    RETURN FALSE
 END FUNCTION
 
 PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALLINT
@@ -1006,6 +1032,7 @@ END FUNCTION
 PUBLIC FUNCTION canDiscover(address STRING)
     CALL _check_lib_state(0)
     IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
+    IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
         RETURN (connStatus[address] == CONNECT_STATUS_CONNECTED)
     ELSE
@@ -1024,11 +1051,43 @@ PUBLIC FUNCTION getDiscoveryStatus(address STRING) RETURNS SMALLINT
     RETURN DISCOVER_STATUS_UNDEFINED
 END FUNCTION
 
+PUBLIC FUNCTION discoveryStatusToString(s SMALLINT) RETURNS STRING
+    CASE s
+    WHEN DISCOVER_STATUS_UNDEFINED  RETURN "Undefined"
+    WHEN DISCOVER_STATUS_DISCOVERED RETURN "Discovered"
+    WHEN DISCOVER_STATUS_FAILED     RETURN "Failed"
+    OTHERWISE RETURN NULL
+    END CASE
+END FUNCTION
+
 PUBLIC FUNCTION getDiscoveryName(address STRING) RETURNS STRING
     IF discResultDict.contains(address) THEN
         RETURN discResultDict[address].name
     END IF
     RETURN NULL
+END FUNCTION
+
+PRIVATE FUNCTION _saveSubsResult(jsonResult util.JSONObject) RETURNS SMALLINT
+    DEFINE x INTEGER
+    DEFINE res SubscribeResultT
+
+    LET res.timestamp = CURRENT
+    LET res.address = jsonResult.get("address")
+    LET res.service = jsonResult.get("service")
+    LET res.characteristic = jsonResult.get("characteristic")
+    LET res.value = jsonResult.get("value")
+
+    IF res.address IS NOT NULL
+    AND res.service IS NOT NULL
+    AND res.characteristic IS NOT NULL
+    THEN
+        LET x = subsResultArray.getLength()+1
+        LET subsResultArray[x].* = res.*
+        RETURN 0
+    ELSE
+        RETURN -1
+    END IF
+
 END FUNCTION
 
 PRIVATE FUNCTION _subsKey(address STRING, service STRING, characteristic STRING)
@@ -1038,8 +1097,10 @@ END FUNCTION
 PUBLIC FUNCTION canSubscribe(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
     DEFINE sk STRING
     LET sk = _subsKey(address, service, characteristic)
+    IF sk IS NULL THEN RETURN FALSE END IF
     IF subsStatus.contains(sk) THEN
         RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_READY
+              OR subsStatus[sk] == SUBSCRIBE_STATUS_UNSUBSCRIBED
               OR subsStatus[sk] == SUBSCRIBE_STATUS_FAILED )
     END IF
     RETURN FALSE
@@ -1061,12 +1122,14 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
     LET params.characteristic = characteristic
     TRY
         LET sk = _subsKey(address, service, characteristic)
+display "subscribing : sk = ", sk
         LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBING
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
-                [BLUETOOTHLEPLUGIN, "subscrcibe", params],
+                [BLUETOOTHLEPLUGIN, "subscribe", params],
                 [callbackIdSubscribe[sk]])
-display sfmt("subscribe callbackIdSubscribe = %2", callbackIdSubscribe[sk])
+display sfmt("subscribe callbackIdSubscribe = %1", callbackIdSubscribe[sk])
     CATCH
+display "******* here!!!"
         CALL _debug_error()
         RETURN -1
     END TRY
@@ -1076,6 +1139,7 @@ END FUNCTION
 PUBLIC FUNCTION canUnsubscribe(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
     DEFINE sk STRING
     LET sk = _subsKey(address, service, characteristic)
+    IF sk IS NULL THEN RETURN FALSE END IF
     IF subsStatus.contains(sk) THEN
         RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBING
               OR subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBED
@@ -1097,6 +1161,8 @@ PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRIN
        RETURN -2
     END IF
     LET params.address = address
+    LET params.service = service
+    LET params.characteristic = characteristic
     TRY
         CALL ui.Interface.frontCall("cordova", "call",
                 [BLUETOOTHLEPLUGIN,"unsubscribe",params],
@@ -1113,4 +1179,37 @@ PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRIN
         RETURN -1
     END TRY
     RETURN 0
+END FUNCTION
+
+PUBLIC FUNCTION getSubscriptionStatus(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT
+    DEFINE sk STRING
+    LET sk = _subsKey(address, service, characteristic)
+    IF sk IS NOT NULL THEN
+        IF subsStatus.contains(sk) THEN
+            RETURN subsStatus[sk]
+        END IF
+    END IF
+    RETURN SUBSCRIBE_STATUS_UNDEFINED
+END FUNCTION
+
+PUBLIC FUNCTION subscriptionStatusToString(s SMALLINT) RETURNS STRING
+    CASE s
+    WHEN SUBSCRIBE_STATUS_UNDEFINED    RETURN "Undefined"
+    WHEN SUBSCRIBE_STATUS_READY        RETURN "Ready"
+    WHEN SUBSCRIBE_STATUS_SUBSCRIBING  RETURN "Subscribing"
+    WHEN SUBSCRIBE_STATUS_SUBSCRIBED   RETURN "Subscribed"
+    WHEN SUBSCRIBE_STATUS_UNSUBSCRIBED RETURN "Unsubscribed"
+    WHEN SUBSCRIBE_STATUS_FAILED       RETURN "Failed"
+    WHEN SUBSCRIBE_STATUS_RESULTS      RETURN "Results"
+    OTHERWISE RETURN NULL
+    END CASE
+END FUNCTION
+
+PUBLIC FUNCTION getSubscriptionResults( sra SubscribeResultArrayT )
+    CALL subsResultArray.copyTo( sra )
+END FUNCTION
+
+PUBLIC FUNCTION clearSubscriptionResultBuffer()
+    CALL subsResultArray.clear()
+    --LET subsResultsOffset = 1
 END FUNCTION
