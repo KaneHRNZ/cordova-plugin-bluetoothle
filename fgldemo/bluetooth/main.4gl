@@ -15,12 +15,16 @@ DEFINE inforec RECORD
         address STRING,
         service STRING,
         characteristic STRING,
+        descriptor STRING,
+        value STRING,
+        descvalue STRING,
         infomsg STRING
     END RECORD
 
 DEFINE addrCombobox ui.ComboBox
 DEFINE servCombobox ui.ComboBox
 DEFINE chrcCombobox ui.ComboBox
+DEFINE descCombobox ui.ComboBox
 
 DEFINE discResults fglcdvBluetoothLE.DiscoverDictionaryT
 
@@ -42,6 +46,7 @@ MAIN
       LET addrCombobox = ui.ComboBox.forName("formonly.address")
       LET servCombobox = ui.ComboBox.forName("formonly.service")
       LET chrcCombobox = ui.ComboBox.forName("formonly.characteristic")
+      LET descCombobox = ui.ComboBox.forName("formonly.descriptor")
       --for CALL DIALOG.setActionHidden("cordovacallback",1) -- GMI bug ignoring ATTRIBUTES(DEFAULTVIEW=NO)?
       CALL setup_dialog(DIALOG)
 
@@ -155,14 +160,21 @@ MAIN
        LET inforec.service = servCombobox.getItemName(1) -- May be NULL if empty
        CALL fillCharacteristicCombobox(inforec.address, inforec.service)
        LET inforec.characteristic = chrcCombobox.getItemName(1) -- May be NULL if empty
+       CALL fillDescriptorCombobox(inforec.address, inforec.service, inforec.characteristic)
+       LET inforec.descriptor = descCombobox.getItemName(1) -- May be NULL if empty
        CALL setup_dialog(DIALOG)
 
     ON CHANGE service
        CALL fillCharacteristicCombobox(inforec.address, inforec.service)
        LET inforec.characteristic = chrcCombobox.getItemName(1) -- May be NULL if empty
+       CALL fillDescriptorCombobox(inforec.address, inforec.service, inforec.characteristic)
+       LET inforec.descriptor = descCombobox.getItemName(1) -- May be NULL if empty
        CALL setup_dialog(DIALOG)
 
     ON CHANGE characteristic
+       CALL setup_dialog(DIALOG)
+
+    ON CHANGE descriptor
        CALL setup_dialog(DIALOG)
 
     ON ACTION connect ATTRIBUTES(TEXT="Connect to address")
@@ -214,6 +226,42 @@ MAIN
        END IF
        CALL setup_dialog(DIALOG)
 
+    ON ACTION read ATTRIBUTES(TEXT="Read")
+       CALL fglcdvBluetoothLE.read(inforec.address, inforec.service, inforec.characteristic) RETURNING s, inforec.value
+       IF s >= 0 THEN
+          MESSAGE "BluetoothLE characteristic read done."
+       ELSE
+          ERROR "BluetoothLE characteristic read failed."
+       END IF
+       CALL setup_dialog(DIALOG)
+
+    ON ACTION write ATTRIBUTES(TEXT="Write")
+       CALL fglcdvBluetoothLE.write(inforec.address, inforec.service, inforec.characteristic, inforec.value) RETURNING s
+       IF s >= 0 THEN
+          MESSAGE "BluetoothLE characteristic write done."
+       ELSE
+          ERROR "BluetoothLE characteristic write failed."
+       END IF
+       CALL setup_dialog(DIALOG)
+
+    ON ACTION descread ATTRIBUTES(TEXT="Read Desc.")
+       CALL fglcdvBluetoothLE.readDescriptor(inforec.address, inforec.service, inforec.characteristic, inforec.descriptor) RETURNING s, inforec.descvalue
+       IF s >= 0 THEN
+          MESSAGE "BluetoothLE descriptor read done."
+       ELSE
+          ERROR "BluetoothLE descriptor read failed."
+       END IF
+       CALL setup_dialog(DIALOG)
+
+    ON ACTION descwrite ATTRIBUTES(TEXT="Write Desc.")
+       CALL fglcdvBluetoothLE.writeDescriptor(inforec.address, inforec.service, inforec.characteristic, inforec.descriptor, inforec.descvalue) RETURNING s
+       IF s >= 0 THEN
+          MESSAGE "BluetoothLE descriptor write done."
+       ELSE
+          ERROR "BluetoothLE descriptor write failed."
+       END IF
+       CALL setup_dialog(DIALOG)
+
     END INPUT
 
     CALL fglcdvBluetoothLE.fini()
@@ -238,20 +286,30 @@ END FUNCTION
 PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     DEFINE x SMALLINT
     DEFINE addr, name STRING
+    DEFINE cp fglcdvBluetoothLE.CharacteristicPropertiesT
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
-    CALL d.setActionActive("startscan",  fglcdvBluetoothLE.canStartScan())
-    CALL d.setActionActive("stopscan",   fglcdvBluetoothLE.canStopScan())
-    CALL d.setActionActive("connect",    fglcdvBluetoothLE.canConnect(inforec.address))
-    CALL d.setActionActive("close",      fglcdvBluetoothLE.canClose(inforec.address))
-    CALL d.setActionActive("discover",   fglcdvBluetoothLE.canDiscover(inforec.address))
-    CALL d.setActionActive("showdisc",   fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)
-                                            == fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED)
-    CALL d.setActionActive("subscribe",  fglcdvBluetoothLE.canSubscribe(inforec.address,
-                                                                        inforec.service,
-                                                                        inforec.characteristic))
+    CALL d.setActionActive("startscan", fglcdvBluetoothLE.canStartScan())
+    CALL d.setActionActive("stopscan", fglcdvBluetoothLE.canStopScan())
+    CALL d.setActionActive("connect", fglcdvBluetoothLE.canConnect(inforec.address))
+    CALL d.setActionActive("close", fglcdvBluetoothLE.canClose(inforec.address))
+    CALL d.setActionActive("discover", fglcdvBluetoothLE.canDiscover(inforec.address))
+    CALL d.setActionActive("showdisc", fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)
+                                          == fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED)
+    CALL d.setActionActive("subscribe", fglcdvBluetoothLE.canSubscribe(inforec.address,
+                                                                       inforec.service,
+                                                                       inforec.characteristic))
     CALL d.setActionActive("unsubscribe",fglcdvBluetoothLE.canUnsubscribe(inforec.address,
                                                                           inforec.service,
                                                                           inforec.characteristic))
+    CALL fglcdvBluetoothLE.getCharacteristicProperties(inforec.address,
+                                                       inforec.service,
+                                                       inforec.characteristic) RETURNING cp.*
+    CALL d.setActionActive("read", cp.read)
+    CALL d.setActionActive("write", cp.write)
+
+    --CALL d.setActionActive("descread", cp.read)
+    --CALL d.setActionActive("descwrite", cp.write)
+    
     LET inforec.infomsg =
       SFMT("Initialization status: %1\n",
             fglcdvBluetoothLE.initializationStatusToString(
@@ -439,6 +497,8 @@ PRIVATE FUNCTION fillServiceCombobox(address STRING)
   CALL servCombobox.clear()
   LET inforec.characteristic = NULL
   CALL chrcCombobox.clear()
+  LET inforec.descriptor = NULL
+  CALL descCombobox.clear()
   IF fglcdvBluetoothLE.getDiscoveryStatus(address)
         != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
      RETURN
@@ -460,6 +520,8 @@ PRIVATE FUNCTION fillCharacteristicCombobox(address STRING, service STRING)
   DEFINE x, cnt INTEGER
   LET inforec.characteristic = NULL
   CALL chrcCombobox.clear()
+  LET inforec.descriptor = NULL
+  CALL descCombobox.clear()
   IF fglcdvBluetoothLE.getDiscoveryStatus(address)
         != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
      RETURN
@@ -473,6 +535,31 @@ PRIVATE FUNCTION fillCharacteristicCombobox(address STRING, service STRING)
 --display "       characteristic: ", chrcarr[x]
             CALL chrcCombobox.addItem(chrcarr[x], NULL)
         END FOR
+     END IF
+  END IF
+END FUNCTION
+
+PRIVATE FUNCTION fillDescriptorCombobox(address STRING, service STRING, characteristic STRING)
+  DEFINE resdic fglcdvBluetoothLE.DiscoverDictionaryT
+  DEFINE descarr DYNAMIC ARRAY OF STRING
+  DEFINE x, cnt INTEGER
+  LET inforec.descriptor = NULL
+  CALL descCombobox.clear()
+  IF fglcdvBluetoothLE.getDiscoveryStatus(address)
+        != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
+     RETURN
+  END IF
+  CALL fglcdvBluetoothLE.getDiscoveryResults(resdic)
+  IF resdic.contains(address) THEN
+     IF resdic[address].services.contains(service) THEN
+        IF resdic[address].services[service].characteristics.contains(characteristic) THEN
+           LET descarr = resdic[address].services[service].characteristics[characteristic].descriptors.getKeys()
+           LET cnt = descarr.getLength()
+           FOR x=1 TO cnt
+display "       descriptor: ", descarr[x]
+               CALL descCombobox.addItem(descarr[x], NULL)
+           END FOR
+        END IF
      END IF
   END IF
 END FUNCTION

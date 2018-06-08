@@ -13,13 +13,18 @@ GRID
 [binit                                ]
 [bscan             |bstop             ]
 [bshsc                                ]
-4.[faddr                              ]
+3.[faddr                              ]
 [bconn             |bclos             ]
 [bdisc             |bshds             ]
-7.[fserv                              ]
-8.[fchar                              ]
+6.[fserv                              ]
+7.[fchar                              ]
 [bsubs             |bunsb             ]
 [bshsb                                ]
+9.[fvalu                              ]
+[bread             |bwrit             ]
+11.[fdesc                             ]
+[brdds             |bwrds             ]
+13.[fdsvl                             ]
 [bevts                                ]
 [binfo                                ]
 [finfo                                ]
@@ -32,17 +37,24 @@ END
 ATTRIBUTES
 COMBOBOX faddr = FORMONLY.address, PLACEHOLDER="BLE device address";
 BUTTON binit : initialize, TEXT="1. Initialize";
-BUTTON bscan : startscan, TEXT="2. Start Scan";
-BUTTON bstop : stopscan, TEXT="3. Stop Scan";
+BUTTON bscan : startscan, TEXT="2.a. Start Scan";
+BUTTON bstop : stopscan, TEXT="2.b. Stop Scan";
 BUTTON bshsc : showscanres, TEXT="Show all scan results";
-BUTTON bconn : connect, TEXT="5. Connect";
-BUTTON bclos : close, TEXT="11. Close";
-BUTTON bdisc : discover, TEXT="6. Discover";
+BUTTON bconn : connect, TEXT="4.a. Connect";
+BUTTON bclos : close, TEXT="4.b. Close";
+BUTTON bdisc : discover, TEXT="5. Discover";
 BUTTON bshds : showdisc, TEXT="Show data";
 COMBOBOX fserv = FORMONLY.service, PLACEHOLDER="BLE service UUID";
 COMBOBOX fchar = FORMONLY.characteristic, PLACEHOLDER="BLE characteristic UUID";
-BUTTON bsubs : subscribe, TEXT="9. Subscribe";
-BUTTON bunsb : unsubscribe, TEXT="10. Unsubscribe";
+COMBOBOX fdesc = FORMONLY.descriptor, PLACEHOLDER="BLE descriptor UUID";
+BUTTON bsubs : subscribe, TEXT="8.a. Subscribe";
+BUTTON bunsb : unsubscribe, TEXT="8.b. Unsubscribe";
+EDIT fvalu = FORMONLY.value, SCROLL, PLACEHOLDER="Value";
+BUTTON bread : read, TEXT="10.b. Read";
+BUTTON bwrit : write, TEXT="10.c. Write";
+BUTTON brdds : descread, TEXT="12.b. Read Desc.";
+BUTTON bwrds : descwrite, TEXT="12.c. Write Desc.";
+EDIT fdsvl = FORMONLY.descvalue, SCROLL, PLACEHOLDER="Descriptor value";
 BUTTON bshsb : showsubsres, TEXT="Show subscription results";
 BUTTON bevts : showevents, TEXT="Show background events";
 BUTTON binfo : queryinfo, TEXT="Query info";

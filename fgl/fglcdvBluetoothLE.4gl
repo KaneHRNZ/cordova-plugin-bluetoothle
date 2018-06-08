@@ -1024,7 +1024,7 @@ PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALL
                 END IF
             END FOR
         END IF
-display "discovery result = ", util.JSON.format( util.JSON.stringify( discResultDict[address] ) )
+--display "discovery result = ", util.JSON.format( util.JSON.stringify( discResultDict[address] ) )
     ELSE
         LET discResultDict[address].status = DISCOVER_STATUS_FAILED
         RETURN -3
@@ -1049,6 +1049,7 @@ PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
         CALL ui.Interface.frontCall("cordova", "call",
                 [BLUETOOTHLEPLUGIN,"discover",params],
                 [result])
+display "discovery result: ", util.JSON.format(result)
         IF (s := _saveDiscoveryData(address, result)) < 0 THEN
             RETURN s
         END IF
@@ -1129,9 +1130,17 @@ PUBLIC FUNCTION canSubscribe(address STRING, service STRING, characteristic STRI
     LET sk = _subsKey(address, service, characteristic)
     IF sk IS NULL THEN RETURN FALSE END IF
     IF subsStatus.contains(sk) THEN
-        RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_READY
+        IF NOT ( subsStatus[sk] == SUBSCRIBE_STATUS_READY
               OR subsStatus[sk] == SUBSCRIBE_STATUS_UNSUBSCRIBED
-              OR subsStatus[sk] == SUBSCRIBE_STATUS_FAILED )
+              OR subsStatus[sk] == SUBSCRIBE_STATUS_FAILED ) THEN
+           RETURN FALSE
+        END IF
+        -- Make sure that the characteristic properties allow subscription
+        IF hasCharacteristic(address, service, characteristic) THEN
+            IF discResultDict[address].services[service].characteristics[characteristic].properties.notify THEN
+                RETURN TRUE
+            END IF
+        END IF
     END IF
     RETURN FALSE
 END FUNCTION
@@ -1246,4 +1255,178 @@ END FUNCTION
 PUBLIC FUNCTION clearSubscriptionResultBuffer()
     CALL subsResultArray.clear()
     --LET subsResultsOffset = 1
+END FUNCTION
+
+PUBLIC FUNCTION hasCharacteristic(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
+    IF connStatus.contains(address) THEN
+        IF connStatus[address] == CONNECT_STATUS_CONNECTED THEN
+            IF getDiscoveryStatus(address) == DISCOVER_STATUS_DISCOVERED THEN
+                IF discResultDict.contains(address) THEN
+                    IF discResultDict[address].services.contains(service) THEN
+                        RETURN discResultDict[address].services[service].characteristics.contains(characteristic)
+                    END IF
+                END IF
+            END IF
+        END IF
+    END IF
+    RETURN FALSE
+END FUNCTION
+
+PUBLIC FUNCTION getCharacteristicProperties(address STRING, service STRING, characteristic STRING) RETURNS CharacteristicPropertiesT
+    DEFINE dummy CharacteristicPropertiesT
+    IF hasCharacteristic(address, service, characteristic) THEN
+display SFMT("Characteritic %1:\n\t properties: %2\n\t permissions:%3\n",
+         _subsKey(address, service, characteristic),
+         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].properties ),
+         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].permissions )
+        )
+        RETURN discResultDict[address].services[service].characteristics[characteristic].properties.*
+    END IF
+    RETURN dummy.*
+END FUNCTION
+
+PUBLIC FUNCTION getCharacteristicPermission(address STRING, service STRING, characteristic STRING) RETURNS PermissionsT
+    DEFINE dummy PermissionsT
+    IF hasCharacteristic(address, service, characteristic) THEN
+        RETURN discResultDict[address].services[service].characteristics[characteristic].permissions.*
+    END IF
+    RETURN dummy.*
+END FUNCTION
+
+PUBLIC FUNCTION read(address STRING, service STRING, characteristic STRING) RETURNS (SMALLINT, STRING)
+    DEFINE params RECORD
+               address STRING,
+               service STRING,
+               characteristic STRING
+           END RECORD
+    DEFINE prop CharacteristicPropertiesT
+    DEFINE result, value STRING
+    DEFINE jsonObject util.JSONObject
+    CALL _check_lib_state(1)
+    CALL getCharacteristicProperties(address, service, characteristic) RETURNING prop.*
+    IF NOT prop.read THEN
+        RETURN -2, NULL
+    END IF
+    LET params.address = address
+    LET params.service = service
+    LET params.characteristic = characteristic
+    TRY
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN, "read", params],
+                [result])
+        LET jsonObject = util.JSONObject.parse(result)
+        LET value = jsonObject.get("value")
+    CATCH
+        CALL _debug_error()
+        RETURN -1, NULL
+    END TRY
+    RETURN 0, value
+END FUNCTION
+
+PUBLIC FUNCTION write(address STRING, service STRING, characteristic STRING, value STRING) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING,
+               service STRING,
+               characteristic STRING,
+               value STRING,
+               type STRING
+           END RECORD
+    DEFINE prop CharacteristicPropertiesT
+    DEFINE result STRING
+    DEFINE jsonObject util.JSONObject
+    CALL _check_lib_state(1)
+    CALL getCharacteristicProperties(address, service, characteristic) RETURNING prop.*
+    IF NOT prop.write THEN
+        RETURN -2
+    END IF
+    LET params.address = address
+    LET params.service = service
+    LET params.characteristic = characteristic
+    LET params.value = value
+    TRY
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN, "write", params],
+                [result])
+        LET jsonObject = util.JSONObject.parse(result)
+        IF jsonObject.get("status") != "written" THEN
+            RETURN -3
+        END IF
+    CATCH
+        CALL _debug_error()
+        RETURN -1
+    END TRY
+    RETURN 0
+END FUNCTION
+
+PUBLIC FUNCTION readDescriptor(address STRING, service STRING, characteristic STRING, descriptor STRING) RETURNS (SMALLINT, STRING)
+    DEFINE params RECORD
+               address STRING,
+               service STRING,
+               characteristic STRING,
+               descriptor STRING
+           END RECORD
+    DEFINE result, value STRING
+    DEFINE jsonObject util.JSONObject
+    CALL _check_lib_state(1)
+{ FIXME?
+    DEFINE perm PermissionsT
+    CALL getDescriptorPermissions(address, service, characteristic, descriptor) RETURNING perm.*
+    IF NOT perm.read THEN
+        RETURN -2, NULL
+    END IF
+}
+    LET params.address = address
+    LET params.service = service
+    LET params.characteristic = characteristic
+    LET params.descriptor = descriptor
+    TRY
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN, "readDescriptor", params],
+                [result])
+        LET jsonObject = util.JSONObject.parse(result)
+        LET value = jsonObject.get("value")
+    CATCH
+        CALL _debug_error()
+        RETURN -1, NULL
+    END TRY
+    RETURN 0, value
+END FUNCTION
+
+PUBLIC FUNCTION writeDescriptor(address STRING, service STRING, characteristic STRING, descriptor STRING, value STRING) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING,
+               service STRING,
+               characteristic STRING,
+               descriptor STRING,
+               value STRING,
+               type STRING
+           END RECORD
+    DEFINE result STRING
+    DEFINE jsonObject util.JSONObject
+    CALL _check_lib_state(1)
+{ FIXME?
+    DEFINE perm PermissionsT
+    CALL getDescriptorPermissions(address, service, characteristic, descriptor) RETURNING perm.*
+    IF NOT perm.write THEN
+        RETURN -2
+    END IF
+}
+    LET params.address = address
+    LET params.service = service
+    LET params.characteristic = characteristic
+    LET params.descriptor = descriptor
+    LET params.value = value
+    TRY
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN, "writeDescriptor", params],
+                [result])
+        LET jsonObject = util.JSONObject.parse(result)
+        IF jsonObject.get("status") != "writeDescriptor" THEN
+            RETURN -3
+        END IF
+    CATCH
+        CALL _debug_error()
+        RETURN -1
+    END TRY
+    RETURN 0
 END FUNCTION
