@@ -13,11 +13,11 @@ GRID
 [binit                                ]
 [bscan             |bstop             ]
 [bshsc                                ]
-[faddr                                ]
+4.[faddr                              ]
 [bconn             |bclos             ]
 [bdisc             |bshds             ]
-[fserv                                ]
-[fchar                                ]
+7.[fserv                              ]
+8.[fchar                              ]
 [bsubs             |bunsb             ]
 [bshsb                                ]
 [bevts                                ]
@@ -31,19 +31,19 @@ END
 
 ATTRIBUTES
 COMBOBOX faddr = FORMONLY.address, PLACEHOLDER="BLE device address";
-BUTTON binit : initialize, TEXT="Initialize";
-BUTTON bscan : startscan, TEXT="Start Scan";
-BUTTON bstop : stopscan, TEXT="Stop Scan";
+BUTTON binit : initialize, TEXT="1. Initialize";
+BUTTON bscan : startscan, TEXT="2. Start Scan";
+BUTTON bstop : stopscan, TEXT="3. Stop Scan";
 BUTTON bshsc : showscanres, TEXT="Show all scan results";
-BUTTON bconn : connect, TEXT="Connect";
-BUTTON bclos : close, TEXT="Close";
-BUTTON bdisc : discover, TEXT="Discover";
+BUTTON bconn : connect, TEXT="5. Connect";
+BUTTON bclos : close, TEXT="11. Close";
+BUTTON bdisc : discover, TEXT="6. Discover";
 BUTTON bshds : showdisc, TEXT="Show data";
 COMBOBOX fserv = FORMONLY.service, PLACEHOLDER="BLE service UUID";
 COMBOBOX fchar = FORMONLY.characteristic, PLACEHOLDER="BLE characteristic UUID";
-BUTTON bsubs : subscribe, TEXT="Subscribe";
-BUTTON bunsb : unsubscribe, TEXT="Unsubscribe";
-BUTTON bshsb : showsubsres, TEXT="Show subscruption results";
+BUTTON bsubs : subscribe, TEXT="9. Subscribe";
+BUTTON bunsb : unsubscribe, TEXT="10. Unsubscribe";
+BUTTON bshsb : showsubsres, TEXT="Show subscription results";
 BUTTON bevts : showevents, TEXT="Show background events";
 BUTTON binfo : queryinfo, TEXT="Query info";
 TEXTEDIT finfo = FORMONLY.infomsg, STRETCH=BOTH;

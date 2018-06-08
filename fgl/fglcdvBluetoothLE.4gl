@@ -205,6 +205,8 @@ PRIVATE DEFINE callbackIdClose STRING
 PRIVATE DEFINE callbackIdSubscribe DICTIONARY OF STRING
 
 PRIVATE DEFINE lastErrorInfo util.JSONObject
+PRIVATE DEFINE lastConnAddr STRING
+PRIVATE DEFINE lastSubsSK STRING
 
 PRIVATE DEFINE scanResultArray ScanResultArrayT
 PRIVATE DEFINE scanResultsOffset INTEGER
@@ -212,6 +214,7 @@ PRIVATE DEFINE scanResultsOffset INTEGER
 PRIVATE DEFINE discResultDict DiscoverDictionaryT
 
 PRIVATE DEFINE subsResultArray SubscribeResultArrayT
+
 
 #+ Initializes the plugin library
 #+
@@ -336,7 +339,6 @@ PRIVATE FUNCTION _getAllCallbackData(filter STRING)
     DEFINE result STRING,
            results util.JSONArray,
            errinfo util.JSONObject
-display "  getAllCallbackData for callbackId = ", filter
     TRY
 --call _ts_init()
         CALL ui.Interface.frontCall("cordova","getAllCallbackData",[filter],[result])
@@ -427,8 +429,36 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
 
     IF callbackId IS NULL THEN RETURN 0 END IF
 
+display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
     CALL _getAllCallbackData(callbackId) RETURNING s, jsonArray, lastErrorInfo
     IF s<0 THEN
+        CASE
+        WHEN what=="initialize"
+            LET initStatus = INIT_STATUS_FAILED
+            LET scanStatus = SCAN_STATUS_NOT_READY
+        WHEN what=="scan"
+            LET scanStatus = SCAN_STATUS_FAILED
+        WHEN what=="connect" OR what=="close"
+            LET addr = lastConnAddr
+            IF lastErrorInfo IS NOT NULL THEN
+                LET addr = lastErrorInfo.get("address")
+            END IF
+            IF addr IS NULL THEN CALL _fatalError("connect error: address field is null.") END IF
+            LET connStatus[addr] = CONNECT_STATUS_FAILED
+        WHEN what=="subscribe" OR what=="unsubscribe"
+            LET sk = lastSubsSK
+            IF lastErrorInfo IS NOT NULL THEN
+                LET addr = lastErrorInfo.get("address")
+                -- Service and characteristics may not be provided in the ...
+                LET serv = lastErrorInfo.get("service")
+                LET chrc = lastErrorInfo.get("characteristic")
+                IF addr IS NOT NULL AND serv IS NOT NULL AND chrc IS NOT NULL THEN
+                    LET sk = _subsKey(addr,serv,chrc)
+                END IF
+            END IF
+            IF sk IS NULL THEN CALL _fatalError("subscribe error: sk is null.") END IF
+            LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
+        END CASE
         RETURN -1
     END IF
     LET len = jsonArray.getLength()
@@ -439,7 +469,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
         LET bgEvents[idx].timestamp  = CURRENT
         LET bgEvents[idx].callbackId = callbackId
         LET bgEvents[idx].result     = jsonResult.toString()
-display "  process result:", bgEvents[idx].result
+display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
         CASE what
         WHEN "initialize"
             CASE jsonResult.get("status")
@@ -796,6 +826,7 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     LET params.autoConnect = FALSE -- (Android) we assume a scan was done.
     TRY
         LET command = "connect"
+        LET lastConnAddr = address
         IF connStatus.contains(address) THEN
             IF connStatus[address]==CONNECT_STATUS_FAILED THEN
                 LET command = "reconnect"
@@ -823,6 +854,7 @@ PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
     END IF
     LET params.address = address
     TRY
+        LET lastConnAddr = address
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN,"close",params],
                 [callbackIdClose])
@@ -868,7 +900,7 @@ PUBLIC FUNCTION canConnect(address STRING)
     END IF
 END FUNCTION
 
-PUBLIC FUNCTION hasSubscriptions(address STRING) RETURNS BOOLEAN
+PUBLIC FUNCTION hasActiveSubscriptions(address STRING) RETURNS BOOLEAN
     DEFINE arr DYNAMIC ARRAY OF STRING,
            x,alen,slen INTEGER,
            addr STRING
@@ -878,7 +910,9 @@ PUBLIC FUNCTION hasSubscriptions(address STRING) RETURNS BOOLEAN
     LET slen = addr.getLength()
     FOR x=1 TO alen
         IF arr[x].subString(1,slen) == addr THEN
-           RETURN TRUE
+           IF _canUnsubSK(arr[x]) THEN
+               RETURN TRUE
+           END IF
         END IF
     END FOR
     RETURN FALSE
@@ -896,11 +930,7 @@ PUBLIC FUNCTION canClose(address STRING)
             RETURN TRUE
         END IF
         IF connStatus[address] == CONNECT_STATUS_CONNECTED THEN
-            IF hasSubscriptions(address) THEN
-                RETURN FALSE
-            ELSE
-                RETURN TRUE
-            END IF
+            RETURN (NOT hasActiveSubscriptions(address))
         END IF
     END IF
     RETURN FALSE
@@ -1124,16 +1154,21 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
         LET sk = _subsKey(address, service, characteristic)
 display "subscribing : sk = ", sk
         LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBING
+        LET lastSubsSK = sk
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN, "subscribe", params],
                 [callbackIdSubscribe[sk]])
-display sfmt("subscribe callbackIdSubscribe = %1", callbackIdSubscribe[sk])
     CATCH
-display "******* here!!!"
         CALL _debug_error()
         RETURN -1
     END TRY
     RETURN 0
+END FUNCTION
+
+PRIVATE FUNCTION _canUnsubSK(sk STRING)
+    RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBING
+          OR subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBED
+          OR subsStatus[sk] == SUBSCRIBE_STATUS_RESULTS )
 END FUNCTION
 
 PUBLIC FUNCTION canUnsubscribe(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
@@ -1141,9 +1176,7 @@ PUBLIC FUNCTION canUnsubscribe(address STRING, service STRING, characteristic ST
     LET sk = _subsKey(address, service, characteristic)
     IF sk IS NULL THEN RETURN FALSE END IF
     IF subsStatus.contains(sk) THEN
-        RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBING
-              OR subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBED
-              OR subsStatus[sk] == SUBSCRIBE_STATUS_RESULTS)
+        RETURN _canUnsubSK(sk)
     END IF
     RETURN FALSE
 END FUNCTION
@@ -1168,6 +1201,7 @@ PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRIN
                 [BLUETOOTHLEPLUGIN,"unsubscribe",params],
                 [result])
         LET sk = _subsKey(address, service, characteristic)
+        LET lastSubsSK = sk
         LET jsonResult = util.jsonObject.parse(result)
         IF jsonResult.get("status") == "unsubscribed" THEN
             LET subsStatus[sk] = SUBSCRIBE_STATUS_UNSUBSCRIBED
