@@ -26,13 +26,14 @@ PLUGIN=cordova-plugin-bluetoothle
 # then we use the native code from this repository
 ifneq ($(wildcard ../../fgldemo),)
   PLUGIN=../..
+  FGLLDPATH=../../fgl
 endif
 
 MODULES  = $(patsubst %.4gl, %.42m, $(wildcard *.4gl))
 FORMS    = $(patsubst %.per, %.42f, $(wildcard *.per))
 
 %.42m: %.4gl
-	fglcomp -M $*
+	FGLLDPATH=$(FGLLDPATH) fglcomp -M $*
 
 %.42f: %.per
 	fglform -M $*
@@ -43,7 +44,7 @@ all:: $(MODULES) $(FORMS)
 main.42m: main.42f bgevents.42f scanres.42f subsres.42f textinfo.42f
 
 run: main.42m
-	fglrun main
+	FGLLDPATH=$(FGLLDPATH) fglrun main
 
 gmi.install: all
 	gmibuildtool --app-name=$(APPNAME) --bundle-id=$(BUNDLE_IDENTIFIER) --provisioning=$(PROVISIONING_PROFILE) --certificate=$(IDENTITY) --device=$(DEVICE) --mode=$(MODE) --install=yes --build-cordova=$(PLUGIN)
