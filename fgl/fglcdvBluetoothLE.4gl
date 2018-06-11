@@ -346,8 +346,10 @@ PRIVATE FUNCTION _getAllCallbackData(filter STRING)
 --display "getAllCallbackData        : ", _ts_diff()
     CATCH
         LET errinfo = _extract_error_info()
+display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
         RETURN -1, NULL, errinfo
     END TRY
+display "  getAllCallbackData result: ", result
     RETURN 0, results, NULL
 END FUNCTION
 
@@ -432,6 +434,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
 display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
     CALL _getAllCallbackData(callbackId) RETURNING s, jsonArray, lastErrorInfo
     IF s<0 THEN
+        -- Cannot rely on lastErrorInfo: Sometimes we get {"message":"Unknown error."}
         CASE
         WHEN what=="initialize"
             LET initStatus = INIT_STATUS_FAILED
@@ -439,24 +442,25 @@ display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackI
         WHEN what=="scan"
             LET scanStatus = SCAN_STATUS_FAILED
         WHEN what=="connect" OR what=="close"
-            LET addr = lastConnAddr
             IF lastErrorInfo IS NOT NULL THEN
-                LET addr = lastErrorInfo.get("address")
+                IF lastErrorInfo.get("address") IS NOT NULL THEN
+                    LET addr = lastErrorInfo.get("address")
+                END IF
             END IF
-            IF addr IS NULL THEN CALL _fatalError("connect error: address field is null.") END IF
-            LET connStatus[addr] = CONNECT_STATUS_FAILED
+            IF addr IS NULL THEN LET addr = lastConnAddr END IF
+            IF addr IS NULL THEN CALL _fatalError("connect error: address is unknown.") END IF
+            LET connStatus[lastConnAddr] = CONNECT_STATUS_FAILED
         WHEN what=="subscribe" OR what=="unsubscribe"
-            LET sk = lastSubsSK
             IF lastErrorInfo IS NOT NULL THEN
                 LET addr = lastErrorInfo.get("address")
-                -- Service and characteristics may not be provided in the ...
                 LET serv = lastErrorInfo.get("service")
                 LET chrc = lastErrorInfo.get("characteristic")
                 IF addr IS NOT NULL AND serv IS NOT NULL AND chrc IS NOT NULL THEN
                     LET sk = _subsKey(addr,serv,chrc)
                 END IF
             END IF
-            IF sk IS NULL THEN CALL _fatalError("subscribe error: sk is null.") END IF
+            IF sk IS NULL THEN LET sk = lastSubsSK END IF
+            IF sk IS NULL THEN CALL _fatalError("subscribe error: sk is unknown.") END IF
             LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
         END CASE
         RETURN -1
@@ -743,7 +747,7 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN,"startScan",scanOptions],
                 [callbackIdScan])
-display "startScan callbackId = ", callbackIdScan
+--display "startScan callbackId = ", callbackIdScan
         LET scanStatus = SCAN_STATUS_STARTING
     CATCH
         CALL _debug_error()
@@ -838,6 +842,7 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
                 [callbackIdConnect])
 display sfmt("%1 callbackIdConnect = %2", command, callbackIdConnect)
     CATCH
+display sfmt("%1 failed!!", command)
         CALL _debug_error()
         RETURN -1
     END TRY
@@ -858,7 +863,7 @@ PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN,"close",params],
                 [callbackIdClose])
-display "close   callbackIdClose = ", callbackIdClose
+--display "close   callbackIdClose = ", callbackIdClose
     CATCH
         CALL _debug_error()
         RETURN -1
@@ -1049,7 +1054,7 @@ PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
         CALL ui.Interface.frontCall("cordova", "call",
                 [BLUETOOTHLEPLUGIN,"discover",params],
                 [result])
-display "discovery result: ", util.JSON.format(result)
+--display "discovery result: ", util.JSON.format(result)
         IF (s := _saveDiscoveryData(address, result)) < 0 THEN
             RETURN s
         END IF
@@ -1275,17 +1280,17 @@ END FUNCTION
 PUBLIC FUNCTION getCharacteristicProperties(address STRING, service STRING, characteristic STRING) RETURNS CharacteristicPropertiesT
     DEFINE dummy CharacteristicPropertiesT
     IF hasCharacteristic(address, service, characteristic) THEN
-display SFMT("Characteritic %1:\n\t properties: %2\n\t permissions:%3\n",
-         _subsKey(address, service, characteristic),
-         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].properties ),
-         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].permissions )
-        )
+-- display SFMT("Characteritic %1:\n\t properties: %2\n\t permissions:%3\n",
+--         _subsKey(address, service, characteristic),
+--         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].properties ),
+--         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].permissions )
+--        )
         RETURN discResultDict[address].services[service].characteristics[characteristic].properties.*
     END IF
     RETURN dummy.*
 END FUNCTION
 
-PUBLIC FUNCTION getCharacteristicPermission(address STRING, service STRING, characteristic STRING) RETURNS PermissionsT
+PUBLIC FUNCTION getCharacteristicPermissions(address STRING, service STRING, characteristic STRING) RETURNS PermissionsT
     DEFINE dummy PermissionsT
     IF hasCharacteristic(address, service, characteristic) THEN
         RETURN discResultDict[address].services[service].characteristics[characteristic].permissions.*

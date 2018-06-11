@@ -247,6 +247,7 @@ MAIN
     ON ACTION descread ATTRIBUTES(TEXT="Read Desc.")
        CALL fglcdvBluetoothLE.readDescriptor(inforec.address, inforec.service, inforec.characteristic, inforec.descriptor) RETURNING s, inforec.descvalue
        IF s >= 0 THEN
+display "Decoded value = ", util.Strings.base64DecodeToString(inforec.descvalue)
           MESSAGE "BluetoothLE descriptor read done."
        ELSE
           ERROR "BluetoothLE descriptor read failed."
@@ -556,7 +557,7 @@ PRIVATE FUNCTION fillDescriptorCombobox(address STRING, service STRING, characte
            LET descarr = resdic[address].services[service].characteristics[characteristic].descriptors.getKeys()
            LET cnt = descarr.getLength()
            FOR x=1 TO cnt
-display "       descriptor: ", descarr[x]
+--display "       descriptor: ", descarr[x]
                CALL descCombobox.addItem(descarr[x], NULL)
            END FOR
         END IF
