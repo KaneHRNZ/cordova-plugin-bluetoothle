@@ -26,10 +26,6 @@ DEFINE servCombobox ui.ComboBox
 DEFINE chrcCombobox ui.ComboBox
 DEFINE descCombobox ui.ComboBox
 
-DEFINE discResults fglcdvBluetoothLE.DiscoverDictionaryT
-
---we just check if we can call some of the core functions
---in this plugin (scanning the neighbourhood)
 MAIN
     DEFINE fen STRING, cnt, m, s, s2 INT
 
@@ -205,10 +201,10 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION showdisc ATTRIBUTES(TEXT="Show discovery result")
-       CALL fglcdvBluetoothLE.getDiscoveryResults(discResults)
-       IF discResults.contains(inforec.address) THEN
-          CALL show_text( util.JSON.format(util.JSON.stringify(discResults[inforec.address])) )
-       END IF
+       CALL show_discovery(inforec.address)
+
+    ON ACTION showvals ATTRIBUTES(TEXT="Show charact. values")
+       CALL show_values(inforec.address)
 
     ON ACTION subscribe ATTRIBUTES(TEXT="Subscribe")
        IF fglcdvBluetoothLE.subscribe(inforec.address, inforec.service, inforec.characteristic) >= 0 THEN
@@ -269,6 +265,60 @@ display "Decoded value = ", util.Strings.base64DecodeToString(inforec.descvalue)
 
 END MAIN
 
+PRIVATE FUNCTION show_discovery(address STRING)
+    DEFINE discres fglcdvBluetoothLE.DiscoverDictionaryT
+    CALL fglcdvBluetoothLE.getDiscoveryResults(discres)
+    IF discres.contains(inforec.address) THEN
+       CALL show_text( util.JSON.format(util.JSON.stringify(discres[inforec.address])) )
+    END IF
+END FUNCTION
+
+PRIVATE FUNCTION show_values(address STRING)
+    DEFINE discres fglcdvBluetoothLE.DiscoverDictionaryT
+    DEFINE s_uuids DYNAMIC ARRAY OF STRING, s_x INTEGER
+    DEFINE c_uuids DYNAMIC ARRAY OF STRING, c_x INTEGER
+    DEFINE info base.StringBuffer
+    DEFINE name, value, tmp STRING
+    DEFINE s SMALLINT
+    CALL fglcdvBluetoothLE.getDiscoveryResults(discres)
+    IF discres.contains(inforec.address) THEN
+       LET info = base.StringBuffer.create()
+       LET s_uuids = discres[address].services.getKeys()
+       FOR s_x = 1 TO s_uuids.getLength()
+           CALL info.append(SFMT("\nService: %1:\n",s_uuids[s_x]))
+           LET c_uuids = discres[address].services[s_uuids[s_x]].characteristics.getKeys()
+           CALL info.append("  Characteristics:\n")
+           FOR c_x = 1 TO c_uuids.getLength()
+               MESSAGE SFMT("Reading serv. %1/%2, charact. %3/%4", s_x, s_uuids.getLength(), c_x, c_uuids.getLength())
+               LET name = c_uuids[c_x]
+               IF discres[address].services[s_uuids[s_x]].characteristics[c_uuids[c_x]].descriptors.contains("2901") THEN
+                  CALL fglcdvBluetoothLE.readDescriptor(address, s_uuids[s_x], c_uuids[c_x], "2901") RETURNING s, tmp
+                  IF s>=0 THEN
+                     IF getFrontEndName() == "GMA" THEN
+                        LET name = util.Strings.base64DecodeToString(tmp)
+                     ELSE
+                        LET name = tmp
+                     END IF
+                  END IF
+               END IF
+               IF discres[address].services[s_uuids[s_x]].characteristics[c_uuids[c_x]].properties.read THEN
+                  CALL fglcdvBluetoothLE.read(address, s_uuids[s_x], c_uuids[c_x] ) RETURNING s, tmp
+                  IF s>=0 THEN
+                     LET value = tmp
+                  ELSE
+                     LET value = SFMT("<read failure: %1>", s)
+                  END IF
+               ELSE
+                  LET value = "<not readable>"
+               END IF
+               CALL info.append(SFMT("     %1: %2\n", name, value))
+           END FOR
+       END FOR
+display info.toString()
+       CALL show_text( info.toString() )
+    END IF
+END FUNCTION
+
 PRIVATE FUNCTION show_text(textinfo STRING)
     OPEN WINDOW wtx WITH FORM "textinfo"
     INPUT BY NAME textinfo WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE)
@@ -287,15 +337,18 @@ END FUNCTION
 PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     DEFINE x SMALLINT
     DEFINE addr, name STRING
+    DEFINE discovered BOOLEAN
     DEFINE cp fglcdvBluetoothLE.CharacteristicPropertiesT
+    LET discovered = fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)
+                        == fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
     CALL d.setActionActive("startscan", fglcdvBluetoothLE.canStartScan())
     CALL d.setActionActive("stopscan", fglcdvBluetoothLE.canStopScan())
     CALL d.setActionActive("connect", fglcdvBluetoothLE.canConnect(inforec.address))
     CALL d.setActionActive("close", fglcdvBluetoothLE.canClose(inforec.address))
     CALL d.setActionActive("discover", fglcdvBluetoothLE.canDiscover(inforec.address))
-    CALL d.setActionActive("showdisc", fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)
-                                          == fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED)
+    CALL d.setActionActive("showdisc", discovered)
+    CALL d.setActionActive("showvals", discovered)
     CALL d.setActionActive("subscribe", fglcdvBluetoothLE.canSubscribe(inforec.address,
                                                                        inforec.service,
                                                                        inforec.characteristic))

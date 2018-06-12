@@ -1142,7 +1142,9 @@ PUBLIC FUNCTION canSubscribe(address STRING, service STRING, characteristic STRI
         END IF
         -- Make sure that the characteristic properties allow subscription
         IF hasCharacteristic(address, service, characteristic) THEN
-            IF discResultDict[address].services[service].characteristics[characteristic].properties.notify THEN
+            IF discResultDict[address].services[service].characteristics[characteristic].properties.notify
+            OR discResultDict[address].services[service].characteristics[characteristic].properties.indicate
+            THEN
                 RETURN TRUE
             END IF
         END IF

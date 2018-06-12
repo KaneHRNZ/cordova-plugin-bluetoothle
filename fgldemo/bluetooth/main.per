@@ -16,6 +16,7 @@ GRID
 3.[faddr                              ]
 [bconn             |bclos             ]
 [bdisc             |bshds             ]
+[bshvl                                ]
 6.[fserv                              ]
 7.[fchar                              ]
 [bsubs             |bunsb             ]
@@ -43,7 +44,8 @@ BUTTON bshsc : showscanres, TEXT="Show all scan results";
 BUTTON bconn : connect, TEXT="4.a. Connect";
 BUTTON bclos : close, TEXT="4.b. Close";
 BUTTON bdisc : discover, TEXT="5. Discover";
-BUTTON bshds : showdisc, TEXT="Show data";
+BUTTON bshds : showdisc, TEXT="Show disc.";
+BUTTON bshvl : showvals, TEXT="Show values";
 COMBOBOX fserv = FORMONLY.service, PLACEHOLDER="BLE service UUID";
 COMBOBOX fchar = FORMONLY.characteristic, PLACEHOLDER="BLE characteristic UUID";
 COMBOBOX fdesc = FORMONLY.descriptor, PLACEHOLDER="BLE descriptor UUID";
