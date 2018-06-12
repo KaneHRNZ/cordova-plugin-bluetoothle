@@ -26,7 +26,7 @@ PUBLIC TYPE BgEventT RECORD
     result STRING
 END RECORD
 PUBLIC TYPE BgEventArrayT DYNAMIC ARRAY OF BgEventT
-DEFINE bgEvents BgEventArrayT
+PRIVATE DEFINE bgEvents BgEventArrayT
 
 PUBLIC TYPE InitOptionsT RECORD
   request BOOLEAN,
@@ -81,6 +81,20 @@ PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBED   = 3
 PUBLIC CONSTANT SUBSCRIBE_STATUS_UNSUBSCRIBED = 4
 PUBLIC CONSTANT SUBSCRIBE_STATUS_FAILED       = 5
 PUBLIC CONSTANT SUBSCRIBE_STATUS_RESULTS      = 6
+
+PUBLIC CONSTANT SERVICE_GENERIC_ACCESS                              = "1800"
+PUBLIC CONSTANT SERVICE_DEVICE_INFORMATION                          = "180A"
+
+PUBLIC CONSTANT CARACTERISTIC_MEASUREMENT_INTERVAL                                = "2A21"
+PUBLIC CONSTANT CARACTERISTIC_SYSTEM_ID                                           = "2A23"
+PUBLIC CONSTANT CARACTERISTIC_MODEL_NUMBER_STRING                                 = "2A24"
+PUBLIC CONSTANT CARACTERISTIC_SERIAL_NUMBER_STRING                                = "2A25"
+PUBLIC CONSTANT CARACTERISTIC_FIRMWARE_VERSION_STRING                             = "2A26"
+PUBLIC CONSTANT CARACTERISTIC_HARDWARE_VERSION_STRING                             = "2A27"
+PUBLIC CONSTANT CARACTERISTIC_SOFTWARE_VERSION_STRING                             = "2A28"
+PUBLIC CONSTANT CARACTERISTIC_MANUFACTURER_NAME_STRING                            = "2A29"
+PUBLIC CONSTANT CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST = "2A2A"
+PUBLIC CONSTANT CARACTERISTIC_PNP_ID                                              = "2A50"
 
 PUBLIC TYPE ScanOptionsT RECORD
   services DYNAMIC ARRAY OF STRING,
@@ -826,6 +840,7 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
            END RECORD
     DEFINE command STRING
     CALL _check_lib_state(1)
+    CALL _cleanupDevice(address)
     LET params.address = address
     LET params.autoConnect = FALSE -- (Android) we assume a scan was done.
     TRY
@@ -849,6 +864,23 @@ display sfmt("%1 failed!!", command)
     RETURN 0
 END FUNCTION
 
+PRIVATE FUNCTION _cleanupDevice(address STRING)
+    DEFINE arr DYNAMIC ARRAY OF STRING,
+           x,alen,slen INTEGER,
+           addr STRING
+    CALL discResultDict.remove(address)
+    CALL subsResultArray.clear()
+    LET arr = subsStatus.getKeys()
+    LET alen = arr.getLength()
+    LET addr = address||"/"
+    LET slen = addr.getLength()
+    FOR x=1 TO alen
+        IF arr[x].subString(1,slen) == addr THEN
+           CALL subsStatus.remove(arr[x])
+        END IF
+    END FOR
+END FUNCTION
+
 PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING
@@ -857,6 +889,7 @@ PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
     IF NOT canClose(address) THEN
        RETURN -2
     END IF
+    CALL _cleanupDevice(address)
     LET params.address = address
     TRY
         LET lastConnAddr = address
@@ -1306,14 +1339,11 @@ PUBLIC FUNCTION read(address STRING, service STRING, characteristic STRING) RETU
                service STRING,
                characteristic STRING
            END RECORD
-    DEFINE prop CharacteristicPropertiesT
     DEFINE result, value STRING
     DEFINE jsonObject util.JSONObject
     CALL _check_lib_state(1)
-    CALL getCharacteristicProperties(address, service, characteristic) RETURNING prop.*
-    IF NOT prop.read THEN
-        RETURN -2, NULL
-    END IF
+    -- We do not check for discovered info / permissions:
+    -- Must be able to use this function without discover done.
     LET params.address = address
     LET params.service = service
     LET params.characteristic = characteristic
@@ -1338,14 +1368,11 @@ PUBLIC FUNCTION write(address STRING, service STRING, characteristic STRING, val
                value STRING,
                type STRING
            END RECORD
-    DEFINE prop CharacteristicPropertiesT
     DEFINE result STRING
     DEFINE jsonObject util.JSONObject
     CALL _check_lib_state(1)
-    CALL getCharacteristicProperties(address, service, characteristic) RETURNING prop.*
-    IF NOT prop.write THEN
-        RETURN -2
-    END IF
+    -- We do not check for discovered info / permissions:
+    -- Must be able to use this function without discover done.
     LET params.address = address
     LET params.service = service
     LET params.characteristic = characteristic
@@ -1375,13 +1402,8 @@ PUBLIC FUNCTION readDescriptor(address STRING, service STRING, characteristic ST
     DEFINE result, value STRING
     DEFINE jsonObject util.JSONObject
     CALL _check_lib_state(1)
-{ FIXME?
-    DEFINE perm PermissionsT
-    CALL getDescriptorPermissions(address, service, characteristic, descriptor) RETURNING perm.*
-    IF NOT perm.read THEN
-        RETURN -2, NULL
-    END IF
-}
+    -- We do not check for discovered info / permissions:
+    -- Must be able to use this function without discover done.
     LET params.address = address
     LET params.service = service
     LET params.characteristic = characteristic
@@ -1411,13 +1433,8 @@ PUBLIC FUNCTION writeDescriptor(address STRING, service STRING, characteristic S
     DEFINE result STRING
     DEFINE jsonObject util.JSONObject
     CALL _check_lib_state(1)
-{ FIXME?
-    DEFINE perm PermissionsT
-    CALL getDescriptorPermissions(address, service, characteristic, descriptor) RETURNING perm.*
-    IF NOT perm.write THEN
-        RETURN -2
-    END IF
-}
+    -- We do not check for discovered info / permissions:
+    -- Must be able to use this function without discover done.
     LET params.address = address
     LET params.service = service
     LET params.characteristic = characteristic

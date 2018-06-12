@@ -128,11 +128,15 @@ MAIN
                      CURRENT HOUR TO FRACTION(3), cnt, fglcdvBluetoothLE.getLastErrorMessage() )
        END IF
        LET s2 = fglcdvBluetoothLE.getConnectStatus(inforec.address)
-       IF s2 != s AND s2 == CONNECT_STATUS_FAILED THEN
-           IF mbox_yn("Connection",
-              SFMT("BLE Connection to: \n%1\n has failed.\nDo you want to close the connection?",inforec.address)) THEN
-               LET s = fglcdvBluetoothLE.close(inforec.address)
-           END IF
+       IF s2 != s THEN -- Something happened with connection...
+          CASE s2
+          WHEN CONNECT_STATUS_FAILED
+             IF mbox_yn("Connection", SFMT("BLE Connection to: \n%1\n has failed.\nDo you want to close the connection?",inforec.address)) THEN
+                LET s = fglcdvBluetoothLE.close(inforec.address)
+             END IF
+          WHEN CONNECT_STATUS_CONNECTED
+             MESSAGE SFMT("Connected to %1", inforec.address)
+          END CASE
        END IF
        CALL fillAddressCombobox()
        CALL setup_dialog(DIALOG)
@@ -195,6 +199,7 @@ MAIN
           CALL fillAddressCombobox()
           CALL fillServiceCombobox(inforec.address)
           MESSAGE "BluetoothLE services discovery done."
+          CALL show_device_info(inforec.address)
        ELSE
           ERROR "BluetoothLE services discovery failed."
        END IF
@@ -243,7 +248,7 @@ MAIN
     ON ACTION descread ATTRIBUTES(TEXT="Read Desc.")
        CALL fglcdvBluetoothLE.readDescriptor(inforec.address, inforec.service, inforec.characteristic, inforec.descriptor) RETURNING s, inforec.descvalue
        IF s >= 0 THEN
-display "Decoded value = ", util.Strings.base64DecodeToString(inforec.descvalue)
+--display "Decoded value = ", _base64_to_string(inforec.descvalue)
           MESSAGE "BluetoothLE descriptor read done."
        ELSE
           ERROR "BluetoothLE descriptor read failed."
@@ -264,6 +269,56 @@ display "Decoded value = ", util.Strings.base64DecodeToString(inforec.descvalue)
     CALL fglcdvBluetoothLE.fini()
 
 END MAIN
+
+-- FIXME? Bug in base.Strings methods when Base64 ends with A ?
+PRIVATE FUNCTION _base64_to_string(src STRING) RETURNS STRING
+    DEFINE l, n SMALLINT
+    DEFINE tmp STRING
+    LET l = src.getLength()
+    IF l > 1 THEN
+       IF src.getCharAt(l) == "A" THEN
+          LET tmp = src.subString(1,l-1)||"="
+          RETURN util.Strings.base64DecodeToString(tmp)
+       END IF
+    END IF
+    IF l > 2 THEN
+       IF src.subString(l-1,l) == "A=" THEN
+          LET tmp = src.subString(1,l-2)||"=="
+          RETURN util.Strings.base64DecodeToString(tmp)
+       END IF
+    END IF
+    LET tmp = util.Strings.base64DecodeToString(src)
+    RETURN NVL(tmp, SFMT("(Base64: %1)",src))
+END FUNCTION
+
+PRIVATE FUNCTION read_device_info(address STRING, info_uuid STRING) RETURNS STRING
+    DEFINE s SMALLINT,
+           tmp, value STRING
+    CALL fglcdvBluetoothLE.read(inforec.address,
+                                fglcdvBluetoothLE.SERVICE_DEVICE_INFORMATION,
+                                info_uuid) RETURNING s, value
+    IF s>=0 THEN
+--display info_uuid, " = ", value
+       RETURN _base64_to_string(value)
+    END IF
+    RETURN "???"
+END FUNCTION
+
+PRIVATE FUNCTION show_device_info(address STRING)
+    DEFINE info STRING
+    LET info = SFMT("Device: %1\n", address),
+               SFMT("    System ID: %1\n",         read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_SYSTEM_ID)),
+               SFMT("    Model num: %1\n",         read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_MODEL_NUMBER_STRING)),
+               SFMT("    Serial num: %1\n",        read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_SERIAL_NUMBER_STRING)),
+               SFMT("    Firmware version: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_FIRMWARE_VERSION_STRING)),
+               SFMT("    Hardware version: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_HARDWARE_VERSION_STRING)),
+               SFMT("    Software version: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_SOFTWARE_VERSION_STRING)),
+               SFMT("    Manufacturer: %1\n",      read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_MANUFACTURER_NAME_STRING)),
+               SFMT("    IEEE 11073 20601: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
+               SFMT("    PnP ID: %1\n",            read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_PNP_ID))
+display "Device info:", info
+    CALL show_text( info )
+END FUNCTION
 
 PRIVATE FUNCTION show_discovery(address STRING)
     DEFINE discres fglcdvBluetoothLE.DiscoverDictionaryT
@@ -295,7 +350,7 @@ PRIVATE FUNCTION show_values(address STRING)
                   CALL fglcdvBluetoothLE.readDescriptor(address, s_uuids[s_x], c_uuids[c_x], "2901") RETURNING s, tmp
                   IF s>=0 THEN
                      IF getFrontEndName() == "GMA" THEN
-                        LET name = util.Strings.base64DecodeToString(tmp)
+                        LET name = _base64_to_string(tmp)
                      ELSE
                         LET name = tmp
                      END IF
@@ -304,7 +359,7 @@ PRIVATE FUNCTION show_values(address STRING)
                IF discres[address].services[s_uuids[s_x]].characteristics[c_uuids[c_x]].properties.read THEN
                   CALL fglcdvBluetoothLE.read(address, s_uuids[s_x], c_uuids[c_x] ) RETURNING s, tmp
                   IF s>=0 THEN
-                     LET value = tmp
+                     LET value = _base64_to_string(tmp)
                   ELSE
                      LET value = SFMT("<read failure: %1>", s)
                   END IF
@@ -323,6 +378,12 @@ PRIVATE FUNCTION show_text(textinfo STRING)
     OPEN WINDOW wtx WITH FORM "textinfo"
     INPUT BY NAME textinfo WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE)
     CLOSE WINDOW wtx
+END FUNCTION
+
+PRIVATE FUNCTION mbox_ok(tit STRING, msg STRING)
+    MENU tit ATTRIBUTES(STYLE="dialog",COMMENT=msg)
+        COMMAND "Ok" EXIT MENU
+    END MENU
 END FUNCTION
 
 PRIVATE FUNCTION mbox_yn(tit STRING, msg STRING) RETURNS BOOLEAN
