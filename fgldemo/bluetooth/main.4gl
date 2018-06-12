@@ -270,7 +270,9 @@ MAIN
 
 END MAIN
 
--- FIXME? Bug in base.Strings methods when Base64 ends with A ?
+-- Strings represented in Base64 can be returned with trailing A chars.
+-- This is not valid Base64 encoding and needs to be cleaned before using
+-- the BDL util.Strings.base64DecodeToString() method.
 PRIVATE FUNCTION _base64_to_string(src STRING) RETURNS STRING
     DEFINE l, n SMALLINT
     DEFINE tmp STRING
@@ -291,11 +293,13 @@ PRIVATE FUNCTION _base64_to_string(src STRING) RETURNS STRING
     RETURN NVL(tmp, SFMT("(Base64: %1)",src))
 END FUNCTION
 
-PRIVATE FUNCTION read_device_info(address STRING, info_uuid STRING) RETURNS STRING
+PRIVATE FUNCTION read_device_info(address STRING, mode SMALLINT, info_uuid STRING) RETURNS STRING
     DEFINE s SMALLINT,
            tmp, value STRING
     CALL fglcdvBluetoothLE.read(inforec.address,
-                                fglcdvBluetoothLE.SERVICE_DEVICE_INFORMATION,
+                                IIF(mode==1,
+                                        fglcdvBluetoothLE.SERVICE_GENERIC_ACCESS,
+                                        fglcdvBluetoothLE.SERVICE_DEVICE_INFORMATION),
                                 info_uuid) RETURNING s, value
     IF s>=0 THEN
 --display info_uuid, " = ", value
@@ -306,17 +310,17 @@ END FUNCTION
 
 PRIVATE FUNCTION show_device_info(address STRING)
     DEFINE info STRING
-    LET info = SFMT("Device: %1\n", address),
-               SFMT("    System ID: %1\n",         read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_SYSTEM_ID)),
-               SFMT("    Model num: %1\n",         read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_MODEL_NUMBER_STRING)),
-               SFMT("    Serial num: %1\n",        read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_SERIAL_NUMBER_STRING)),
-               SFMT("    Firmware version: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_FIRMWARE_VERSION_STRING)),
-               SFMT("    Hardware version: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_HARDWARE_VERSION_STRING)),
-               SFMT("    Software version: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_SOFTWARE_VERSION_STRING)),
-               SFMT("    Manufacturer: %1\n",      read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_MANUFACTURER_NAME_STRING)),
-               SFMT("    IEEE 11073 20601: %1\n",  read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
-               SFMT("    PnP ID: %1\n",            read_device_info(address, fglcdvBluetoothLE.CARACTERISTIC_PNP_ID))
-display "Device info:", info
+    LET info = SFMT("Device: %1 (%2)\n", read_device_info(address,1,fglcdvBluetoothLE.CARACTERISTIC_DEVICE_NAME), address),
+               SFMT("    System ID: %1\n",         read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_SYSTEM_ID)),
+               SFMT("    Model num: %1\n",         read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_MODEL_NUMBER_STRING)),
+               SFMT("    Serial num: %1\n",        read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_SERIAL_NUMBER_STRING)),
+               SFMT("    Firmware version: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_FIRMWARE_VERSION_STRING)),
+               SFMT("    Hardware version: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_HARDWARE_VERSION_STRING)),
+               SFMT("    Software version: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_SOFTWARE_VERSION_STRING)),
+               SFMT("    Manufacturer: %1\n",      read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_MANUFACTURER_NAME_STRING)),
+               SFMT("    IEEE 11073 20601: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
+               SFMT("    PnP ID: %1\n",            read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_PNP_ID))
+--display "Device info:", info
     CALL show_text( info )
 END FUNCTION
 
@@ -369,7 +373,7 @@ PRIVATE FUNCTION show_values(address STRING)
                CALL info.append(SFMT("     %1: %2\n", name, value))
            END FOR
        END FOR
-display info.toString()
+--display info.toString()
        CALL show_text( info.toString() )
     END IF
 END FUNCTION
