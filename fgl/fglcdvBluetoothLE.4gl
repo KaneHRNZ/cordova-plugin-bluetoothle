@@ -8,15 +8,25 @@
 
 #+ Genero BDL wrapper around the Cordova Bluetooth Low Energy plugin.
 #+
-#+ Process as central BluetoothLE device:
-#+  1. Initialize
-#+  2. Scan to get addresses
-#+  3. Connect to addresse
-#+  4. Discover services
-#+  5. Subscrine to service + characteristic
-#+  6. Read characteristic data
-#+  7. Unsubscribe
-#+  8. Close connection
+#+ Steps to act as a central BluetoothLE device:
+#+
+#+ -- 1. Initialize the BLE plugin
+#+
+#+ -- 2. Scan to get BLE device addresses
+#+
+#+ -- 3. Connect to a device using its address
+#+
+#+ -- 4. Discover BLE device services
+#+
+#+ -- 5. Read/Write a characteristic or descriptor
+#+
+#+ -- 6. Subscribe to a BLE service.characteristic / Unsubscribe
+#+
+#+ -- 7. Close connection
+#+
+#+ Most important functions are asynchronous and results need to be handled
+#+ in an ON ACTION cordovacallback handler, using processCallbackEvents()
+#+
 
 IMPORT util
 
@@ -370,7 +380,21 @@ END FUNCTION
 
 #+ Processes BluetoothLE Cordova plugin callback events
 #+
-#+ @return <0 if error. Otherwise, the number of callback data fetched.
+#+ This function has to be called in an ON ACTION cordovacallbak handler:
+#+ Some BLE calls like close as synchronous, while others need to be called
+#+ asynchroneously, where results are fetched with the callback mechanism.
+#+
+#+ @code
+#+ ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
+#+    LET n = fglcdvBluetoothLE.processCallbackEvents()
+#+    IF n >= 0 THEN
+#+       MESSAGE SFMT("%1 events processed.",n)
+#+    ELSE
+#+       ERROR SFMT("error %1 while processing callback results:\n%3",
+#+                   n, fglcdvBluetoothLE.getLastErrorMessage() )
+#+    END IF
+#+
+#+ @return <0 if error. Otherwise, the number of callback data events processed.
 PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
     DEFINE cnt, tot, x INTEGER
     DEFINE sks DYNAMIC ARRAY OF STRING
@@ -551,11 +575,17 @@ display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
     RETURN cnt
 END FUNCTION
 
-PUBLIC FUNCTION getLastErrorInfo()
+#+ Provides the JSON object containing last error information.
+#+
+#+ @return the JSON object with error info, or NULL of no error
+PUBLIC FUNCTION getLastErrorInfo() RETURNS util.JSONObject
     RETURN lastErrorInfo
 END FUNCTION
 
-PUBLIC FUNCTION getLastErrorMessage()
+#+ Provides the description of the last error.
+#+
+#+ @return the error message.
+PUBLIC FUNCTION getLastErrorMessage() RETURNS STRING
     IF lastErrorInfo IS NOT NULL THEN
        RETURN lastErrorInfo.get("message")
     ELSE
@@ -601,7 +631,10 @@ PRIVATE FUNCTION _saveScanResult(jsonResult util.JSONObject) RETURNS SMALLINT
 
 END FUNCTION
 
-PUBLIC FUNCTION canInitialize()
+#+ Indicates if the BLE plugin can be initialized.
+#+
+#+ @return TRUE when initialization is possible, FALSE otherwise.
+PUBLIC FUNCTION canInitialize() RETURNS BOOLEAN
     CALL _check_lib_state(0)
     RETURN (initStatus == INIT_STATUS_DISABLED
          OR initStatus == INIT_STATUS_FAILED)
@@ -651,10 +684,18 @@ END IF
     RETURN 0
 END FUNCTION
 
+#+ Provides the initialization status.
+#+
+#+ @return INIT_STATUS_* values.
 PUBLIC FUNCTION getInitializationStatus() RETURNS SMALLINT
     RETURN initStatus
 END FUNCTION
 
+#+ Provides a display text corresponding to the initialization status.
+#+
+#+ @param s the initialization status (from getInitializationStatus() for example)
+#+
+#+ @return the initialization status as text.
 PUBLIC FUNCTION initializationStatusToString(s SMALLINT) RETURNS STRING
     CASE s
     WHEN INIT_STATUS_DISABLED     RETURN "Disabled"
@@ -692,16 +733,27 @@ PRIVATE FUNCTION _syncCallRB(funcname STRING, resinfo STRING) RETURNS BOOLEAN
     END IF
 END FUNCTION
 
+#+ Checks if initialization is done.
+#+
+#+ @return TRUE when initialized, otherwise FALSE.
 PUBLIC FUNCTION isInitialized() RETURNS BOOLEAN
     CALL _check_lib_state(0)
     RETURN _syncCallRB("isInitialized",NULL)
 END FUNCTION
 
+#+ Checks if BLE device scan is in progress.
+#+
+#+ @return TRUE when scanning, otherwise FALSE.
 PUBLIC FUNCTION isScanning() RETURNS BOOLEAN
     CALL _check_lib_state(1)
     RETURN _syncCallRB("isScanning",NULL)
 END FUNCTION
 
+#+ Checks if the given BLE device is connected.
+#+
+#+ @param address is the device address to check.
+#+
+#+ @return TRUE when connected, otherwise FALSE.
 PUBLIC FUNCTION isConnected(address STRING) RETURNS BOOLEAN
     DEFINE params RECORD address STRING END RECORD
     DEFINE jsonResult util.JSONObject
@@ -719,35 +771,93 @@ PUBLIC FUNCTION isConnected(address STRING) RETURNS BOOLEAN
     END TRY
 END FUNCTION
 
+#+ Checks if the current device allows coarse location (Android).
+#+
+#+ Note that this function is called automatically when doing a startScan().
+#+
+#+ @return TRUE if coarse location is allowed, otherwise FALSE.
 PUBLIC FUNCTION hasCoarseLocationPermission() RETURNS BOOLEAN
     CALL _check_lib_state(1)
     RETURN _syncCallRB("hasPermission",NULL)
 END FUNCTION
 
+#+ If not allowed, ask permission for coarse location (Android).
+#+
+#+ Note that this function is called automatically when doing a startScan().
+#+
+#+ @return TRUE if coarse location is allowed, otherwise FALSE.
 PUBLIC FUNCTION askForCoarseLocationPermission() RETURNS BOOLEAN
     CALL _check_lib_state(1)
     RETURN _syncCallRB("requestPermission",NULL)
 END FUNCTION
 
-PUBLIC FUNCTION canStartScan()
+#+ Indicates if BLE device scanning is possible.
+#+
+#+ This function is typically called to enable/disable dialog actions depending on the current states.
+#+
+#+ @return TRUE if scanning is possible, otherwise FALSE.
+PUBLIC FUNCTION canStartScan() RETURNS BOOLEAN
     CALL _check_lib_state(0)
     RETURN (scanStatus == SCAN_STATUS_READY
          OR scanStatus == SCAN_STATUS_STOPPED
          OR scanStatus == SCAN_STATUS_FAILED)
 END FUNCTION
 
-PUBLIC FUNCTION canStopScan()
+#+ Indicates if BLE device scanning can be stopped.
+#+
+#+ This function is typically called to enable/disable dialog actions depending on the current states.
+#+
+#+ @return TRUE if stop scanning is possible, otherwise FALSE.
+PUBLIC FUNCTION canStopScan() RETURNS BOOLEAN
     CALL _check_lib_state(0)
     RETURN (scanStatus == SCAN_STATUS_STARTED
          OR scanStatus == SCAN_STATUS_RESULTS)
 END FUNCTION
 
+#+ Starts BLE scanning
+#+
+#+ When initialization is done, it is possible to scan for BLE devices.
+#+
+#+ Check if scanning is possible with the canStartScan() function.
+#+
+#+ Use the predefined fglcdvBluetoothLE.scanOptions module variable to define scan options.
+#+
+#+ On Android, the function automatically asks for coarse location permission
+#+ if not currently granted. If this permission is denied by the user, the function
+#+ returns -2.
+#+
+#+ The scan is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().
+#+
+#+ Check the scanning status with the getScanStatus() function:
+#+
+#+ - SCAN_STATUS_STARTED: The scan is starting, waiting for results.
+#+
+#+ - SCAN_STATUS_RESULTS: Scan results are available with getScanResults().
+#+
+#+ @code
+#+ INITIALIZE fglcdvBluetoothLE.scanOptions.* TO NULL
+#+ IF fen == "GMA" THEN
+#+    LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.SCAN_MODE_LOW_POWER
+#+    LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.MATCH_MODE_AGRESSIVE
+#+    LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.MATCH_NUM_ONE_ADVERTISEMENT
+#+    LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.CALLBACK_TYPE_ALL_MATCHES
+#+ ELSE
+#+    LET fglcdvBluetoothLE.scanOptions.allowDuplicates = FALSE
+#+ END IF
+#+ LET fglcdvBluetoothLE.scanOptions.services[1] = "180D"
+#+ LET fglcdvBluetoothLE.scanOptions.services[2] = "180F"
+#+ IF fglcdvBluetoothLE.startScan( fglcdvBluetoothLE.scanOptions.* ) >= 0 THEN
+#+    MESSAGE "BluetoothLE scan started."
+#+ ELSE
+#+    ERROR "BluetoothLE scan failed to start."
+#+ END IF
+#+
+#+ @param scanOptions a record of type ScanOptionsT to provide scan options.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
     CALL _check_lib_state(1)
-    IF NOT (scanStatus == SCAN_STATUS_READY
-         OR scanStatus == SCAN_STATUS_STOPPED
-         OR scanStatus == SCAN_STATUS_FAILED)
-    THEN
+    IF NOT canStartScan() THEN
         RETURN -1
     END IF
     -- On Android we always have to ask for permission
@@ -771,6 +881,13 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
     RETURN 0
 END FUNCTION
 
+#+ Stops BLE scanning
+#+
+#+ After retrieving scan results from startScan(), stop scanning with stopScan().
+#+
+#+ This call is synchronous (result does not need to be handled with cordovacallback action)
+#+
+#+ @return SCAN_STATUS_STOPPED or SCAN_STATUS_FAILED.
 PUBLIC FUNCTION stopScan() RETURNS INTEGER
     DEFINE r SMALLINT, v STRING
     CALL _check_lib_state(1)
@@ -787,10 +904,18 @@ PUBLIC FUNCTION stopScan() RETURNS INTEGER
     END IF
 END FUNCTION
 
+#+ Provides the current scan status.
+#+
+#+ @return SCAN_STATUS_* values.
 PUBLIC FUNCTION getScanStatus() RETURNS SMALLINT
     RETURN scanStatus
 END FUNCTION
 
+#+ Provides a display text corresponding to the scan status.
+#+
+#+ @param s the scan status (from getScanStatus() for example)
+#+
+#+ @return the scan status as text.
 PUBLIC FUNCTION scanStatusToString(s SMALLINT) RETURNS STRING
     CASE s
     WHEN SCAN_STATUS_NOT_READY RETURN "Not ready"
@@ -804,20 +929,28 @@ PUBLIC FUNCTION scanStatusToString(s SMALLINT) RETURNS STRING
     END CASE
 END FUNCTION
 
----
-
+#+ Provides all callback data records collected.
+#+
+#+ @param bge the array of background events to fill.
 PUBLIC FUNCTION getCallbackDataEvents( bge BgEventArrayT )
     CALL bgEvents.copyTo( bge )
 END FUNCTION
 
+#+ Clears the internal buffer for callback data records.
 PUBLIC FUNCTION clearCallbackBuffer()
     CALL bgEvents.clear()
 END FUNCTION
 
+#+ Provides all scan results collected during the BLE scan.
+#+
+#+ @param sra the array of scan results to fill.
 PUBLIC FUNCTION getScanResults( sra ScanResultArrayT )
     CALL scanResultArray.copyTo( sra )
 END FUNCTION
 
+#+ Provides new scan results collected since the last call to this function.
+#+
+#+ @param sra the array of scan results to fill.
 PUBLIC FUNCTION getNewScanResults( sra ScanResultArrayT )
     DEFINE i, x, len INTEGER
     CALL sra.clear()
@@ -829,11 +962,39 @@ PUBLIC FUNCTION getNewScanResults( sra ScanResultArrayT )
     LET scanResultsOffset = len + 1
 END FUNCTION
 
+#+ Clears the internal buffer for scan results.
 PUBLIC FUNCTION clearScanResultBuffer()
     CALL scanResultArray.clear()
     LET scanResultsOffset = 1
 END FUNCTION
 
+#+ Connect to the BLE device identified by its address.
+#+
+#+ After scanning for BLE devices, call this function to connect to one of the devices.
+#+
+#+ Check if connect is possible with the canConnect(address) function.
+#+
+#+ The connection is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().
+#+
+#+ If a first connection failed or was closed, call this function again to try to reconnect.
+#+
+#+ Check the connection status with the getConnectionStatus(address) function:
+#+
+#+ - CONNECT_STATUS_UNDEFINED : Not yet connected
+#+
+#+ - CONNECT_STATUS_CONNECTING : Connection is in progress
+#+
+#+ - CONNECT_STATUS_CONNECTED : Connected to the device
+#+
+#+ - CONNECT_STATUS_DISCONNECTED : Disconnected from the device
+#+
+#+ - CONNECT_STATUS_CLOSED : Connection was closed
+#+
+#+ - CONNECT_STATUS_FAILED : Connection failed
+#+
+#+ @param address the address of the BLE device to connect to, as returned in scan results.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,
@@ -882,6 +1043,15 @@ PRIVATE FUNCTION _cleanupDevice(address STRING)
     END FOR
 END FUNCTION
 
+#+ Close the connection to a device.
+#+
+#+ Check if close is possible with the canClose(address) function.
+#+
+#+ The close is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().
+#+
+#+ @param address the address of the BLE device to disconnect, as returned in scan results.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING
@@ -906,6 +1076,11 @@ PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
 
 END FUNCTION
 
+#+ Provides the current connection status for the given device address.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return CONNECTION_STATUS_* values.
 PUBLIC FUNCTION getConnectStatus(address STRING) RETURNS SMALLINT
     IF connStatus.contains(address) THEN
         RETURN connStatus[address]
@@ -914,6 +1089,11 @@ PUBLIC FUNCTION getConnectStatus(address STRING) RETURNS SMALLINT
     END IF
 END FUNCTION
 
+#+ Provides a display text corresponding to the connection status.
+#+
+#+ @param s the connection status (from getConnectionStatus() for example)
+#+
+#+ @return the connection status as text.
 PUBLIC FUNCTION connectStatusToString(s SMALLINT) RETURNS STRING
     CASE s
     WHEN CONNECT_STATUS_UNDEFINED    RETURN "Undefined"
@@ -926,7 +1106,14 @@ PUBLIC FUNCTION connectStatusToString(s SMALLINT) RETURNS STRING
     END CASE
 END FUNCTION
 
-PUBLIC FUNCTION canConnect(address STRING)
+#+ Indicates if connection to the specified device address is possible.
+#+
+#+ Connection is not possible if scanning was not done.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return TRUE if connection is possible, otherwise FALSE.
+PUBLIC FUNCTION canConnect(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
     IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
@@ -939,6 +1126,14 @@ PUBLIC FUNCTION canConnect(address STRING)
     END IF
 END FUNCTION
 
+#+ Indicates if subscriptions are currently active for the specified device.
+#+
+#+ After subscribing to a service/characteristic, you need first to unsubscribe
+#+ before closing the connection to the device.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return TRUE if this device is used for subscriptions, otherwise FALSE.
 PUBLIC FUNCTION hasActiveSubscriptions(address STRING) RETURNS BOOLEAN
     DEFINE arr DYNAMIC ARRAY OF STRING,
            x,alen,slen INTEGER,
@@ -957,6 +1152,13 @@ PUBLIC FUNCTION hasActiveSubscriptions(address STRING) RETURNS BOOLEAN
     RETURN FALSE
 END FUNCTION
 
+#+ Indicates if it is possible to close the connection from the specified device.
+#+
+#+ It is not possible to close a connection if subscriptions are active.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return TRUE if close is possible, otherwise FALSE.
 PUBLIC FUNCTION canClose(address STRING)
     CALL _check_lib_state(0)
     IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
@@ -1071,6 +1273,16 @@ PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALL
     RETURN 0
 END FUNCTION
 
+#+ Fetch available services and characteritics from the specified device.
+#+
+#+ This call is synchronous (result does not need to be handled with cordovacallback action)
+#+
+#+ After calling this function successfully, use the getDiscoveryResults() function to
+#+ get service and characteristic information of the discovered devices.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,
@@ -1099,7 +1311,12 @@ PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
     RETURN 0
 END FUNCTION
 
-PUBLIC FUNCTION canDiscover(address STRING)
+#+ Indicates if it is possible to discover device services.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return TRUE if discovery is possible, otherwise FALSE.
+PUBLIC FUNCTION canDiscover(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
     IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
@@ -1110,10 +1327,18 @@ PUBLIC FUNCTION canDiscover(address STRING)
     END IF
 END FUNCTION
 
+#+ Returns discovery results for all discovered devices.
+#+
+#+ @param drd the array to hold discovery results.
 PUBLIC FUNCTION getDiscoveryResults(drd DiscoverDictionaryT)
     CALL discResultDict.copyTo( drd )
 END FUNCTION
 
+#+ Provides the discovery status for the given device address.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return DISCOVERY_STATUS_* values.
 PUBLIC FUNCTION getDiscoveryStatus(address STRING) RETURNS SMALLINT
     IF discResultDict.contains(address) THEN
         RETURN discResultDict[address].status
@@ -1121,6 +1346,11 @@ PUBLIC FUNCTION getDiscoveryStatus(address STRING) RETURNS SMALLINT
     RETURN DISCOVER_STATUS_UNDEFINED
 END FUNCTION
 
+#+ Provides a display text corresponding to the discovery status.
+#+
+#+ @param s the discovery status (from getDiscoveryStatus() for example)
+#+
+#+ @return the discovery status as text.
 PUBLIC FUNCTION discoveryStatusToString(s SMALLINT) RETURNS STRING
     CASE s
     WHEN DISCOVER_STATUS_UNDEFINED  RETURN "Undefined"
@@ -1130,6 +1360,11 @@ PUBLIC FUNCTION discoveryStatusToString(s SMALLINT) RETURNS STRING
     END CASE
 END FUNCTION
 
+#+ Provides the name of the discovered device.
+#+
+#+ @param address the address of a BLE device.
+#+
+#+ @return device name.
 PUBLIC FUNCTION getDiscoveryName(address STRING) RETURNS STRING
     IF discResultDict.contains(address) THEN
         RETURN discResultDict[address].name
@@ -1164,6 +1399,13 @@ PRIVATE FUNCTION _subsKey(address STRING, service STRING, characteristic STRING)
     RETURN (address||"/"||service||"/"||characteristic)
 END FUNCTION
 
+#+ Indicates if subscription to the specified characteristic is possible.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return TRUE if subscription is possible, otherwise FALSE.
 PUBLIC FUNCTION canSubscribe(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
     DEFINE sk STRING
     LET sk = _subsKey(address, service, characteristic)
@@ -1186,6 +1428,28 @@ PUBLIC FUNCTION canSubscribe(address STRING, service STRING, characteristic STRI
     RETURN FALSE
 END FUNCTION
 
+#+ Subscribes to a characteristic of the BLE device.
+#+
+#+ After discovering BLE device services, it is possible to subscribe to characteristics
+#+ that have the notify and indicate properties (CharacteristicPropertiesT).
+#+
+#+ To verify if subscription is possible for a given characteristic, use canSubscribe().
+#+
+#+ The subscription is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().
+#+
+#+ Check for available results with the getSubscriptionStatus() function:
+#+
+#+ - SUBSCRIBE_STATUS_SUBSCRIBING : Subscription is in progress.
+#+
+#+ - SUBSCRIBE_STATUS_SUBSCRIBED : Subscription is done.
+#+
+#+ - SUBSCRIBE_STATUS_RESULTS : Results are available with getSubscriptionResults()
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,
@@ -1194,7 +1458,7 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
            END RECORD
     DEFINE sk STRING
     CALL _check_lib_state(1)
-    IF NOT canSubScribe(address, service, characteristic) THEN
+    IF NOT canSubscribe(address, service, characteristic) THEN
         RETURN -2
     END IF
     LET params.address = address
@@ -1221,6 +1485,13 @@ PRIVATE FUNCTION _canUnsubSK(sk STRING)
           OR subsStatus[sk] == SUBSCRIBE_STATUS_RESULTS )
 END FUNCTION
 
+#+ Indicates if it is possible to unsubscribe to a characteristic.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return TRUE if unsubscription is possible, otherwise FALSE.
 PUBLIC FUNCTION canUnsubscribe(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
     DEFINE sk STRING
     LET sk = _subsKey(address, service, characteristic)
@@ -1231,6 +1502,17 @@ PUBLIC FUNCTION canUnsubscribe(address STRING, service STRING, characteristic ST
     RETURN FALSE
 END FUNCTION
 
+#+ Unsubscribes to a characteristic of the BLE device.
+#+
+#+ After subscribing to a BLE device service, call this function to unsubscribe.
+#+
+#+ To verify if unsubscription is possible for a given characteristic, use canUnsubscribe().
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,
@@ -1265,6 +1547,13 @@ PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRIN
     RETURN 0
 END FUNCTION
 
+#+ Provides the subscription status for a given characteristic.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return SUBSCRIBE_STATUS_* values.
 PUBLIC FUNCTION getSubscriptionStatus(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT
     DEFINE sk STRING
     LET sk = _subsKey(address, service, characteristic)
@@ -1276,6 +1565,11 @@ PUBLIC FUNCTION getSubscriptionStatus(address STRING, service STRING, characteri
     RETURN SUBSCRIBE_STATUS_UNDEFINED
 END FUNCTION
 
+#+ Provides a display text corresponding to the subscription status.
+#+
+#+ @param s the subscription status (from getSubscriptionStatus() for example)
+#+
+#+ @return the subscription status as text.
 PUBLIC FUNCTION subscriptionStatusToString(s SMALLINT) RETURNS STRING
     CASE s
     WHEN SUBSCRIBE_STATUS_UNDEFINED    RETURN "Undefined"
@@ -1289,15 +1583,29 @@ PUBLIC FUNCTION subscriptionStatusToString(s SMALLINT) RETURNS STRING
     END CASE
 END FUNCTION
 
+#+ Returns subscription results for all subscribed characteristics.
+#+
+#+ Results can be filtered by using the .address, .service and .characteristic
+#+ members of the array record.
+#+
+#+ @param sra the array to hold subscription results.
 PUBLIC FUNCTION getSubscriptionResults( sra SubscribeResultArrayT )
     CALL subsResultArray.copyTo( sra )
 END FUNCTION
 
+#+ Cleanup subscription result buffer.
 PUBLIC FUNCTION clearSubscriptionResultBuffer()
     CALL subsResultArray.clear()
     --LET subsResultsOffset = 1
 END FUNCTION
 
+#+ Indicates if the BLE device has a specific service characteristic.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return TRUE the characteristic is available, otherwise FALSE.
 PUBLIC FUNCTION hasCharacteristic(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
     IF connStatus.contains(address) THEN
         IF connStatus[address] == CONNECT_STATUS_CONNECTED THEN
@@ -1313,19 +1621,28 @@ PUBLIC FUNCTION hasCharacteristic(address STRING, service STRING, characteristic
     RETURN FALSE
 END FUNCTION
 
+#+ Provides all properties of a service characteristic.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return the set of characteristic properties.
 PUBLIC FUNCTION getCharacteristicProperties(address STRING, service STRING, characteristic STRING) RETURNS CharacteristicPropertiesT
     DEFINE dummy CharacteristicPropertiesT
     IF hasCharacteristic(address, service, characteristic) THEN
--- display SFMT("Characteritic %1:\n\t properties: %2\n\t permissions:%3\n",
---         _subsKey(address, service, characteristic),
---         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].properties ),
---         util.JSON.stringify( discResultDict[address].services[service].characteristics[characteristic].permissions )
---        )
         RETURN discResultDict[address].services[service].characteristics[characteristic].properties.*
     END IF
     RETURN dummy.*
 END FUNCTION
 
+#+ Provides all permissions of a service characteristic.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return the set of characteristic permissions.
 PUBLIC FUNCTION getCharacteristicPermissions(address STRING, service STRING, characteristic STRING) RETURNS PermissionsT
     DEFINE dummy PermissionsT
     IF hasCharacteristic(address, service, characteristic) THEN
@@ -1334,6 +1651,19 @@ PUBLIC FUNCTION getCharacteristicPermissions(address STRING, service STRING, cha
     RETURN dummy.*
 END FUNCTION
 
+#+ Read the value of the specified service characteristic.
+#+
+#+ This call is synchronous (result does not need to be handled with cordovacallback action)
+#+
+#+ The GATT characteristic value is encoded in Base64, and can be the representation
+#+ of some text, numeric or binary data.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+
+#+ @return 1: <0 in case of error, 0 if ok.
+#+ @return 2: the Base64 encoded value.
 PUBLIC FUNCTION read(address STRING, service STRING, characteristic STRING) RETURNS (SMALLINT, STRING)
     DEFINE params RECORD
                address STRING,
@@ -1361,6 +1691,16 @@ PUBLIC FUNCTION read(address STRING, service STRING, characteristic STRING) RETU
     RETURN 0, value
 END FUNCTION
 
+#+ Write the value of the specified service characteristic.
+#+
+#+ This call is synchronous (result does not need to be handled with cordovacallback action)
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+ @param value the GATT characteristic value in Base64 encoding.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION write(address STRING, service STRING, characteristic STRING, value STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,
@@ -1393,6 +1733,20 @@ PUBLIC FUNCTION write(address STRING, service STRING, characteristic STRING, val
     RETURN 0
 END FUNCTION
 
+#+ Read the value of the specified characteristic descriptor.
+#+
+#+ This call is synchronous (result does not need to be handled with cordovacallback action)
+#+
+#+ The GATT descriptor value is encoded in Base64, and can be the representation
+#+ of some text, numeric or binary data.
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+ @param descriptor the UUID of the GATT descriptor.
+#+
+#+ @return 1: <0 in case of error, 0 if ok.
+#+ @return 2: the Base64 encoded value.
 PUBLIC FUNCTION readDescriptor(address STRING, service STRING, characteristic STRING, descriptor STRING) RETURNS (SMALLINT, STRING)
     DEFINE params RECORD
                address STRING,
@@ -1422,6 +1776,17 @@ PUBLIC FUNCTION readDescriptor(address STRING, service STRING, characteristic ST
     RETURN 0, value
 END FUNCTION
 
+#+ Write the value of the specified characteristic descriptor.
+#+
+#+ This call is synchronous (result does not need to be handled with cordovacallback action)
+#+
+#+ @param address the address of a BLE device.
+#+ @param service the UUID of the GATT service.
+#+ @param characteristic the UUID of the GATT characteristic.
+#+ @param descriptor the UUID of the GATT descriptor.
+#+ @param value the GATT descriptor value in Base64 encoding.
+#+
+#+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION writeDescriptor(address STRING, service STRING, characteristic STRING, descriptor STRING, value STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING,

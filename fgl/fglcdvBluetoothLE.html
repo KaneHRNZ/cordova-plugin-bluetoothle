@@ -19,6 +19,16 @@
 <br><small>Summary: <a href="#type_summary">TYPE</a> <a href="#constant_summary">CONSTANT</a> <a href="#variable_summary">VARIABLE</a> <a href="#function_summary">FUNCTION</a></small><hr>
 <b>fgl</b><h1>fglcdvBluetoothLE</h1>
 <p> Genero BDL wrapper around the Cordova Bluetooth Low Energy plugin.</p>
+<p> Steps to act as a central BluetoothLE device:</p>
+<p> -- 1. Initialize the BLE plugin</p>
+<p> -- 2. Scan to get BLE device addresses</p>
+<p> -- 3. Connect to a device using its address</p>
+<p> -- 4. Discover BLE device services</p>
+<p> -- 5. Read/Write a characteristic or descriptor</p>
+<p> -- 6. Subscribe to a BLE service.characteristic / Unsubscribe</p>
+<p> -- 7. Close connection</p>
+<p> Most important functions are asynchronous and results need to be handled
+ in an ON ACTION cordovacallback handler, using processCallbackEvents()</p>
 <a id="type_summary"></a><table border="1" width="100%" cellpadding="3" cellspacing="0" class="summary">
 <tr><th class="summary" colspan="1">TYPE Summary</th></tr>
 <tr><td class="summary-text">
@@ -28,10 +38,52 @@
 <b><a href="#BgEventT">BgEventT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R1&gt;<br>
 </td></tr>
 <tr><td class="summary-text">
+<b><a href="#CharacteristicDescriptorDictionaryT">CharacteristicDescriptorDictionaryT</a></b> DICTIONARY OF  <a href="#CharacteristicDescriptorT">CharacteristicDescriptorT</a><br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CharacteristicDescriptorT">CharacteristicDescriptorT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R9&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CharacteristicDictionaryT">CharacteristicDictionaryT</a></b> DICTIONARY OF  <a href="#CharacteristicT">CharacteristicT</a><br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CharacteristicPropertiesT">CharacteristicPropertiesT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R11&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CharacteristicT">CharacteristicT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R13&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#DiscoverDictionaryT">DiscoverDictionaryT</a></b> DICTIONARY OF  <a href="#DiscoverT">DiscoverT</a><br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#DiscoverT">DiscoverT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R17&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
 <b><a href="#InitOptionsT">InitOptionsT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R3&gt;<br>
 </td></tr>
 <tr><td class="summary-text">
+<b><a href="#PermissionsT">PermissionsT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R7&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
 <b><a href="#ScanOptionsT">ScanOptionsT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R5&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#ScanResultArrayT">ScanResultArrayT</a></b> DYNAMIC ARRAY OF  <a href="#ScanResultT">ScanResultT</a><br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#ScanResultT">ScanResultT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R22&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#ServiceDictionaryT">ServiceDictionaryT</a></b> DICTIONARY OF  <a href="#ServiceT">ServiceT</a><br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#ServiceT">ServiceT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R15&gt;<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SubscribeResultArrayT">SubscribeResultArrayT</a></b> DYNAMIC ARRAY OF  <a href="#SubscribeResultT">SubscribeResultT</a><br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SubscribeResultT">SubscribeResultT</a></b> RECORD &lt;anonymous fglcdvBluetoothLE R24&gt;<br>
 </td></tr>
 </table>
 <br><a id="constant_summary"></a><table border="1" width="100%" cellpadding="3" cellspacing="0" class="summary">
@@ -46,10 +98,82 @@
 <b><a href="#CALLBACK_TYPE_MATCH_LOST">CALLBACK_TYPE_MATCH_LOST</a></b> INTEGER<br>
 </td></tr>
 <tr><td class="summary-text">
-<b><a href="#INIT_CENTRAL">INIT_CENTRAL</a></b> INTEGER<br>
+<b><a href="#CARACTERISTIC_DEVICE_NAME">CARACTERISTIC_DEVICE_NAME</a></b> STRING<br>
 </td></tr>
 <tr><td class="summary-text">
-<b><a href="#INIT_PERIPHERAL">INIT_PERIPHERAL</a></b> INTEGER<br>
+<b><a href="#CARACTERISTIC_FIRMWARE_VERSION_STRING">CARACTERISTIC_FIRMWARE_VERSION_STRING</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_HARDWARE_VERSION_STRING">CARACTERISTIC_HARDWARE_VERSION_STRING</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST">CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_MANUFACTURER_NAME_STRING">CARACTERISTIC_MANUFACTURER_NAME_STRING</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_MEASUREMENT_INTERVAL">CARACTERISTIC_MEASUREMENT_INTERVAL</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_MODEL_NUMBER_STRING">CARACTERISTIC_MODEL_NUMBER_STRING</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_PNP_ID">CARACTERISTIC_PNP_ID</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_SERIAL_NUMBER_STRING">CARACTERISTIC_SERIAL_NUMBER_STRING</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_SOFTWARE_VERSION_STRING">CARACTERISTIC_SOFTWARE_VERSION_STRING</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CARACTERISTIC_SYSTEM_ID">CARACTERISTIC_SYSTEM_ID</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CONNECT_STATUS_CLOSED">CONNECT_STATUS_CLOSED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CONNECT_STATUS_CONNECTED">CONNECT_STATUS_CONNECTED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CONNECT_STATUS_CONNECTING">CONNECT_STATUS_CONNECTING</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CONNECT_STATUS_DISCONNECTED">CONNECT_STATUS_DISCONNECTED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CONNECT_STATUS_FAILED">CONNECT_STATUS_FAILED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#CONNECT_STATUS_UNDEFINED">CONNECT_STATUS_UNDEFINED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#DISCOVER_STATUS_DISCOVERED">DISCOVER_STATUS_DISCOVERED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#DISCOVER_STATUS_FAILED">DISCOVER_STATUS_FAILED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#DISCOVER_STATUS_UNDEFINED">DISCOVER_STATUS_UNDEFINED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#INIT_MODE_CENTRAL">INIT_MODE_CENTRAL</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#INIT_MODE_PERIPHERAL">INIT_MODE_PERIPHERAL</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#INIT_STATUS_DISABLED">INIT_STATUS_DISABLED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#INIT_STATUS_ENABLED">INIT_STATUS_ENABLED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#INIT_STATUS_FAILED">INIT_STATUS_FAILED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#INIT_STATUS_INITIALIZING">INIT_STATUS_INITIALIZING</a></b> INTEGER<br>
 </td></tr>
 <tr><td class="summary-text">
 <b><a href="#MATCH_MODE_AGRESSIVE">MATCH_MODE_AGRESSIVE</a></b> INTEGER<br>
@@ -78,6 +202,54 @@
 <tr><td class="summary-text">
 <b><a href="#SCAN_MODE_OPPORTUNISTIC">SCAN_MODE_OPPORTUNISTIC</a></b> INTEGER<br>
 </td></tr>
+<tr><td class="summary-text">
+<b><a href="#SCAN_STATUS_FAILED">SCAN_STATUS_FAILED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SCAN_STATUS_NOT_READY">SCAN_STATUS_NOT_READY</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SCAN_STATUS_READY">SCAN_STATUS_READY</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SCAN_STATUS_RESULTS">SCAN_STATUS_RESULTS</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SCAN_STATUS_STARTED">SCAN_STATUS_STARTED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SCAN_STATUS_STARTING">SCAN_STATUS_STARTING</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SCAN_STATUS_STOPPED">SCAN_STATUS_STOPPED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SERVICE_DEVICE_INFORMATION">SERVICE_DEVICE_INFORMATION</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SERVICE_GENERIC_ACCESS">SERVICE_GENERIC_ACCESS</a></b> STRING<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SUBSCRIBE_STATUS_FAILED">SUBSCRIBE_STATUS_FAILED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SUBSCRIBE_STATUS_READY">SUBSCRIBE_STATUS_READY</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SUBSCRIBE_STATUS_RESULTS">SUBSCRIBE_STATUS_RESULTS</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SUBSCRIBE_STATUS_SUBSCRIBED">SUBSCRIBE_STATUS_SUBSCRIBED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SUBSCRIBE_STATUS_SUBSCRIBING">SUBSCRIBE_STATUS_SUBSCRIBING</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SUBSCRIBE_STATUS_UNDEFINED">SUBSCRIBE_STATUS_UNDEFINED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#SUBSCRIBE_STATUS_UNSUBSCRIBED">SUBSCRIBE_STATUS_UNSUBSCRIBED</a></b> INTEGER<br>
+</td></tr>
 </table>
 <br><a id="field_summary"></a><table border="1" width="100%" cellpadding="3" cellspacing="0" class="summary">
 <tr><th class="summary" colspan="1">VARIABLE Summary</th></tr>
@@ -93,14 +265,87 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#askForCoarseLocationPermission">askForCoarseLocationPermission</a></b>() RETURNS BOOLEAN<br>
-</td>
+<b><a href="#askForCoarseLocationPermission">askForCoarseLocationPermission</a></b>() RETURNS BOOLEAN<br> If not allowed, ask permission for coarse location (Android).</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#clearCallbackBuffer">clearCallbackBuffer</a></b>()<br>
-</td>
+<b><a href="#canClose">canClose</a></b>(address STRING)<br> Indicates if it is possible to close the connection from the specified device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#canConnect">canConnect</a></b>(address STRING) RETURNS BOOLEAN<br> Indicates if connection to the specified device address is possible.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#canDiscover">canDiscover</a></b>(address STRING) RETURNS BOOLEAN<br> Indicates if it is possible to discover device services.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#canInitialize">canInitialize</a></b>() RETURNS BOOLEAN<br> Indicates if the BLE plugin can be initialized.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#canStartScan">canStartScan</a></b>() RETURNS BOOLEAN<br> Indicates if BLE device scanning is possible.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#canStopScan">canStopScan</a></b>() RETURNS BOOLEAN<br> Indicates if BLE device scanning can be stopped.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#canSubscribe">canSubscribe</a></b>(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN<br> Indicates if subscription to the specified characteristic is possible.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#canUnsubscribe">canUnsubscribe</a></b>(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN<br> Indicates if it is possible to unsubscribe to a characteristic.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#clearCallbackBuffer">clearCallbackBuffer</a></b>()<br> Clears the internal buffer for callback data records.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#clearScanResultBuffer">clearScanResultBuffer</a></b>()<br> Clears the internal buffer for scan results.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#clearSubscriptionResultBuffer">clearSubscriptionResultBuffer</a></b>()<br> Cleanup subscription result buffer.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#close">close</a></b>(address STRING) RETURNS SMALLINT<br> Close the connection to a device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#connect">connect</a></b>(address STRING) RETURNS SMALLINT<br> Connect to the BLE device identified by its address.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#connectStatusToString">connectStatusToString</a></b>(s SMALLINT) RETURNS STRING<br> Provides a display text corresponding to the connection status.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#discover">discover</a></b>(address STRING) RETURNS SMALLINT<br> Fetch available services and characteritics from the specified device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#discoveryStatusToString">discoveryStatusToString</a></b>(s SMALLINT) RETURNS STRING<br> Provides a display text corresponding to the discovery status.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -110,14 +355,92 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#getCallbackData">getCallbackData</a></b>(bge <a href="#BgEventArrayT">BgEventArrayT</a>)<br>
-</td>
+<b><a href="#getCallbackDataEvents">getCallbackDataEvents</a></b>(bge <a href="#BgEventArrayT">BgEventArrayT</a>)<br> Provides all callback data records collected.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#hasCoarseLocationPermission">hasCoarseLocationPermission</a></b>() RETURNS BOOLEAN<br>
-</td>
+<b><a href="#getCharacteristicPermissions">getCharacteristicPermissions</a></b>(address STRING, service STRING, characteristic STRING) RETURNS <a href="#PermissionsT">PermissionsT</a><br> Provides all permissions of a service characteristic.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getCharacteristicProperties">getCharacteristicProperties</a></b>(address STRING, service STRING, characteristic STRING) RETURNS <a href="#CharacteristicPropertiesT">CharacteristicPropertiesT</a><br> Provides all properties of a service characteristic.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getConnectStatus">getConnectStatus</a></b>(address STRING) RETURNS SMALLINT<br> Provides the current connection status for the given device address.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getDiscoveryName">getDiscoveryName</a></b>(address STRING) RETURNS STRING<br> Provides the name of the discovered device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getDiscoveryResults">getDiscoveryResults</a></b>(drd <a href="#DiscoverDictionaryT">DiscoverDictionaryT</a>)<br> Returns discovery results for all discovered devices.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getDiscoveryStatus">getDiscoveryStatus</a></b>(address STRING) RETURNS SMALLINT<br> Provides the discovery status for the given device address.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getInitializationStatus">getInitializationStatus</a></b>() RETURNS SMALLINT<br> Provides the initialization status.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getLastErrorInfo">getLastErrorInfo</a></b>() RETURNS util.JSONObject<br> Provides the JSON object containing last error information.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getLastErrorMessage">getLastErrorMessage</a></b>() RETURNS STRING<br> Provides the description of the last error.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getNewScanResults">getNewScanResults</a></b>(sra <a href="#ScanResultArrayT">ScanResultArrayT</a>)<br> Provides new scan results collected since the last call to this function.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getScanResults">getScanResults</a></b>(sra <a href="#ScanResultArrayT">ScanResultArrayT</a>)<br> Provides all scan results collected during the BLE scan.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getScanStatus">getScanStatus</a></b>() RETURNS SMALLINT<br> Provides the current scan status.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getSubscriptionResults">getSubscriptionResults</a></b>(sra <a href="#SubscribeResultArrayT">SubscribeResultArrayT</a>)<br> Returns subscription results for all subscribed characteristics.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#getSubscriptionStatus">getSubscriptionStatus</a></b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT<br> Provides the subscription status for a given characteristic.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#hasActiveSubscriptions">hasActiveSubscriptions</a></b>(address STRING) RETURNS BOOLEAN<br> Indicates if subscriptions are currently active for the specified device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#hasCharacteristic">hasCharacteristic</a></b>(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN<br> Indicates if the BLE device has a specific service characteristic.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#hasCoarseLocationPermission">hasCoarseLocationPermission</a></b>() RETURNS BOOLEAN<br> Checks if the current device allows coarse location (Android).</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -127,42 +450,82 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
+<b><a href="#initializationStatusToString">initializationStatusToString</a></b>(s SMALLINT) RETURNS STRING<br> Provides a display text corresponding to the initialization status.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
 <b><a href="#initialize">initialize</a></b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER<br> Initializes BLE</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#isEnabled">isEnabled</a></b>() RETURNS BOOLEAN<br>
-</td>
+<b><a href="#isConnected">isConnected</a></b>(address STRING) RETURNS BOOLEAN<br> Checks if the given BLE device is connected.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#isInitialized">isInitialized</a></b>() RETURNS BOOLEAN<br>
-</td>
+<b><a href="#isInitialized">isInitialized</a></b>() RETURNS BOOLEAN<br> Checks if initialization is done.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#isScanning">isScanning</a></b>() RETURNS BOOLEAN<br>
-</td>
+<b><a href="#isScanning">isScanning</a></b>() RETURNS BOOLEAN<br> Checks if BLE device scan is in progress.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#processCallbackEvents">processCallbackEvents</a></b>()<br> Processes BluetoothLE Cordova plugin callback events</td>
+<b><a href="#processCallbackEvents">processCallbackEvents</a></b>() RETURNS INTEGER<br> Processes BluetoothLE Cordova plugin callback events</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#startScan">startScan</a></b>(scanOptions <a href="#ScanOptionsT">ScanOptionsT</a>) RETURNS INTEGER<br>
-</td>
+<b><a href="#read">read</a></b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT, STRING<br> Read the value of the specified service characteristic.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#stopScan">stopScan</a></b>() RETURNS INTEGER<br>
-</td>
+<b><a href="#readDescriptor">readDescriptor</a></b>(address STRING, service STRING, characteristic STRING, descriptor STRING) RETURNS SMALLINT, STRING<br> Read the value of the specified characteristic descriptor.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#scanStatusToString">scanStatusToString</a></b>(s SMALLINT) RETURNS STRING<br> Provides a display text corresponding to the scan status.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#startScan">startScan</a></b>(scanOptions <a href="#ScanOptionsT">ScanOptionsT</a>) RETURNS INTEGER<br> Starts BLE scanning</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#stopScan">stopScan</a></b>() RETURNS INTEGER<br> Stops BLE scanning</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#subscribe">subscribe</a></b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT<br> Subscribes to a characteristic of the BLE device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#subscriptionStatusToString">subscriptionStatusToString</a></b>(s SMALLINT) RETURNS STRING<br> Provides a display text corresponding to the subscription status.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#unsubscribe">unsubscribe</a></b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT<br> Unsubscribes to a characteristic of the BLE device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#write">write</a></b>(address STRING, service STRING, characteristic STRING, value STRING) RETURNS SMALLINT<br> Write the value of the specified service characteristic.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#writeDescriptor">writeDescriptor</a></b>(address STRING, service STRING, characteristic STRING, descriptor STRING, value STRING) RETURNS SMALLINT<br> Write the value of the specified characteristic descriptor.</td>
 </tr>
 </table>
 <br><h2>Types</h2>
@@ -176,9 +539,93 @@
 <tt>TYPE <b>BgEventT</b> RECORD &lt;anonymous fglcdvBluetoothLE R1&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
 <td>    </td>
 <td><table border="0" cellpadding="0" cellspacing="0" class="member">
-<tr><td>time DATETIME HOUR TO SECOND</td></tr>
+<tr><td>timestamp DATETIME YEAR TO FRACTION</td></tr>
 <tr><td>callbackId STRING</td></tr>
 <tr><td>result STRING</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CharacteristicDescriptorDictionaryT"> </a><h3>CharacteristicDescriptorDictionaryT</h3>
+<tt>TYPE <b>CharacteristicDescriptorDictionaryT</b> DICTIONARY OF  <a href="#CharacteristicDescriptorT">CharacteristicDescriptorT</a></tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CharacteristicDescriptorT"> </a><h3>CharacteristicDescriptorT</h3>
+<tt>TYPE <b>CharacteristicDescriptorT</b> RECORD &lt;anonymous fglcdvBluetoothLE R9&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>uuid STRING</td></tr>
+<tr><td>permissions <a href="#PermissionsT">PermissionsT</a>
+</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CharacteristicDictionaryT"> </a><h3>CharacteristicDictionaryT</h3>
+<tt>TYPE <b>CharacteristicDictionaryT</b> DICTIONARY OF  <a href="#CharacteristicT">CharacteristicT</a></tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CharacteristicPropertiesT"> </a><h3>CharacteristicPropertiesT</h3>
+<tt>TYPE <b>CharacteristicPropertiesT</b> RECORD &lt;anonymous fglcdvBluetoothLE R11&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>broadcast BOOLEAN</td></tr>
+<tr><td>extendedProperties BOOLEAN</td></tr>
+<tr><td>indicate BOOLEAN</td></tr>
+<tr><td>notify BOOLEAN</td></tr>
+<tr><td>read BOOLEAN</td></tr>
+<tr><td>write BOOLEAN</td></tr>
+<tr><td>signedWrite BOOLEAN</td></tr>
+<tr><td>authenticatedSignedWrites BOOLEAN</td></tr>
+<tr><td>writeWithoutResponse BOOLEAN</td></tr>
+<tr><td>notifyEncryptionRequired BOOLEAN</td></tr>
+<tr><td>indicateEncryptionRequired BOOLEAN</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CharacteristicT"> </a><h3>CharacteristicT</h3>
+<tt>TYPE <b>CharacteristicT</b> RECORD &lt;anonymous fglcdvBluetoothLE R13&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>uuid STRING</td></tr>
+<tr><td>descriptors <a href="#CharacteristicDescriptorDictionaryT">CharacteristicDescriptorDictionaryT</a>
+</td></tr>
+<tr><td>properties <a href="#CharacteristicPropertiesT">CharacteristicPropertiesT</a>
+</td></tr>
+<tr><td>permissions <a href="#PermissionsT">PermissionsT</a>
+</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="DiscoverDictionaryT"> </a><h3>DiscoverDictionaryT</h3>
+<tt>TYPE <b>DiscoverDictionaryT</b> DICTIONARY OF  <a href="#DiscoverT">DiscoverT</a></tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="DiscoverT"> </a><h3>DiscoverT</h3>
+<tt>TYPE <b>DiscoverT</b> RECORD &lt;anonymous fglcdvBluetoothLE R17&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>status SMALLINT</td></tr>
+<tr><td>name STRING</td></tr>
+<tr><td>address STRING</td></tr>
+<tr><td>services <a href="#ServiceDictionaryT">ServiceDictionaryT</a>
+</td></tr>
 </table></td>
 </tr></table> END RECORD</tt><dl>
 <dd></dd>
@@ -198,6 +645,26 @@
 <dd><dl></dl></dd>
 </dl>
 <hr>
+<a id="PermissionsT"> </a><h3>PermissionsT</h3>
+<tt>TYPE <b>PermissionsT</b> RECORD &lt;anonymous fglcdvBluetoothLE R7&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>read BOOLEAN</td></tr>
+<tr><td>readEncrypted BOOLEAN</td></tr>
+<tr><td>readEncryptedMITM BOOLEAN</td></tr>
+<tr><td>write BOOLEAN</td></tr>
+<tr><td>writeEncrypted BOOLEAN</td></tr>
+<tr><td>writeEncryptedMITM BOOLEAN</td></tr>
+<tr><td>writeSigned BOOLEAN</td></tr>
+<tr><td>writeSignedMITM BOOLEAN</td></tr>
+<tr><td>readEncryptionRequired BOOLEAN</td></tr>
+<tr><td>writeEncryptionRequired BOOLEAN</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
 <a id="ScanOptionsT"> </a><h3>ScanOptionsT</h3>
 <tt>TYPE <b>ScanOptionsT</b> RECORD &lt;anonymous fglcdvBluetoothLE R5&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
 <td>    </td>
@@ -208,6 +675,94 @@
 <tr><td>matchMode SMALLINT</td></tr>
 <tr><td>matchNum SMALLINT</td></tr>
 <tr><td>callbackType SMALLINT</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="ScanResultArrayT"> </a><h3>ScanResultArrayT</h3>
+<tt>TYPE <b>ScanResultArrayT</b> DYNAMIC ARRAY OF  <a href="#ScanResultT">ScanResultT</a></tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="ScanResultT"> </a><h3>ScanResultT</h3>
+<tt>TYPE <b>ScanResultT</b> RECORD &lt;anonymous fglcdvBluetoothLE R22&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>timestamp DATETIME YEAR TO FRACTION</td></tr>
+<tr><td>ad RECORD &lt;anonymous fglcdvBluetoothLE R21&gt;
+        <table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>android RECORD &lt;anonymous fglcdvBluetoothLE R19&gt;
+            <table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member"><tr><td>data STRING</td></tr></table></td>
+</tr></table> END RECORD
+          </td></tr>
+<tr><td>ios RECORD &lt;anonymous fglcdvBluetoothLE R20&gt;
+            <table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>serviceUuids DYNAMIC ARRAY OF STRING</td></tr>
+<tr><td>manufacturerData STRING</td></tr>
+<tr><td>txPowerLevel INTEGER</td></tr>
+<tr><td>overflowServiceUuids DYNAMIC ARRAY OF STRING</td></tr>
+<tr><td>isConnectable BOOLEAN</td></tr>
+<tr><td>solicitedServiceUuids DYNAMIC ARRAY OF STRING</td></tr>
+<tr><td>serviceData util.JSONObject</td></tr>
+<tr><td>localName STRING</td></tr>
+</table></td>
+</tr></table> END RECORD
+          </td></tr>
+</table></td>
+</tr></table> END RECORD
+      </td></tr>
+<tr><td>rssi INTEGER</td></tr>
+<tr><td>name STRING</td></tr>
+<tr><td>address STRING</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="ServiceDictionaryT"> </a><h3>ServiceDictionaryT</h3>
+<tt>TYPE <b>ServiceDictionaryT</b> DICTIONARY OF  <a href="#ServiceT">ServiceT</a></tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="ServiceT"> </a><h3>ServiceT</h3>
+<tt>TYPE <b>ServiceT</b> RECORD &lt;anonymous fglcdvBluetoothLE R15&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>uuid STRING</td></tr>
+<tr><td>characteristics <a href="#CharacteristicDictionaryT">CharacteristicDictionaryT</a>
+</td></tr>
+</table></td>
+</tr></table> END RECORD</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SubscribeResultArrayT"> </a><h3>SubscribeResultArrayT</h3>
+<tt>TYPE <b>SubscribeResultArrayT</b> DYNAMIC ARRAY OF  <a href="#SubscribeResultT">SubscribeResultT</a></tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SubscribeResultT"> </a><h3>SubscribeResultT</h3>
+<tt>TYPE <b>SubscribeResultT</b> RECORD &lt;anonymous fglcdvBluetoothLE R24&gt;<table border="0" cellpadding="0" cellspacing="0" class="member"><tr>
+<td>    </td>
+<td><table border="0" cellpadding="0" cellspacing="0" class="member">
+<tr><td>timestamp DATETIME YEAR TO FRACTION</td></tr>
+<tr><td>address STRING</td></tr>
+<tr><td>service STRING</td></tr>
+<tr><td>characteristic STRING</td></tr>
+<tr><td>value STRING</td></tr>
 </table></td>
 </tr></table> END RECORD</tt><dl>
 <dd></dd>
@@ -233,14 +788,158 @@
 <dd><dl></dl></dd>
 </dl>
 <hr>
-<a id="INIT_CENTRAL"> </a><h3>INIT_CENTRAL</h3>
-<tt>CONSTANT <b>INIT_CENTRAL</b> INTEGER = 1</tt><dl>
+<a id="CARACTERISTIC_DEVICE_NAME"> </a><h3>CARACTERISTIC_DEVICE_NAME</h3>
+<tt>CONSTANT <b>CARACTERISTIC_DEVICE_NAME</b> STRING = "2A00"</tt><dl>
 <dd></dd>
 <dd><dl></dl></dd>
 </dl>
 <hr>
-<a id="INIT_PERIPHERAL"> </a><h3>INIT_PERIPHERAL</h3>
-<tt>CONSTANT <b>INIT_PERIPHERAL</b> INTEGER = 2</tt><dl>
+<a id="CARACTERISTIC_FIRMWARE_VERSION_STRING"> </a><h3>CARACTERISTIC_FIRMWARE_VERSION_STRING</h3>
+<tt>CONSTANT <b>CARACTERISTIC_FIRMWARE_VERSION_STRING</b> STRING = "2A26"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_HARDWARE_VERSION_STRING"> </a><h3>CARACTERISTIC_HARDWARE_VERSION_STRING</h3>
+<tt>CONSTANT <b>CARACTERISTIC_HARDWARE_VERSION_STRING</b> STRING = "2A27"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST"> </a><h3>CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST</h3>
+<tt>CONSTANT <b>CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST</b> STRING = "2A2A"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_MANUFACTURER_NAME_STRING"> </a><h3>CARACTERISTIC_MANUFACTURER_NAME_STRING</h3>
+<tt>CONSTANT <b>CARACTERISTIC_MANUFACTURER_NAME_STRING</b> STRING = "2A29"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_MEASUREMENT_INTERVAL"> </a><h3>CARACTERISTIC_MEASUREMENT_INTERVAL</h3>
+<tt>CONSTANT <b>CARACTERISTIC_MEASUREMENT_INTERVAL</b> STRING = "2A21"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_MODEL_NUMBER_STRING"> </a><h3>CARACTERISTIC_MODEL_NUMBER_STRING</h3>
+<tt>CONSTANT <b>CARACTERISTIC_MODEL_NUMBER_STRING</b> STRING = "2A24"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_PNP_ID"> </a><h3>CARACTERISTIC_PNP_ID</h3>
+<tt>CONSTANT <b>CARACTERISTIC_PNP_ID</b> STRING = "2A50"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_SERIAL_NUMBER_STRING"> </a><h3>CARACTERISTIC_SERIAL_NUMBER_STRING</h3>
+<tt>CONSTANT <b>CARACTERISTIC_SERIAL_NUMBER_STRING</b> STRING = "2A25"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_SOFTWARE_VERSION_STRING"> </a><h3>CARACTERISTIC_SOFTWARE_VERSION_STRING</h3>
+<tt>CONSTANT <b>CARACTERISTIC_SOFTWARE_VERSION_STRING</b> STRING = "2A28"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CARACTERISTIC_SYSTEM_ID"> </a><h3>CARACTERISTIC_SYSTEM_ID</h3>
+<tt>CONSTANT <b>CARACTERISTIC_SYSTEM_ID</b> STRING = "2A23"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CONNECT_STATUS_CLOSED"> </a><h3>CONNECT_STATUS_CLOSED</h3>
+<tt>CONSTANT <b>CONNECT_STATUS_CLOSED</b> INTEGER = 4</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CONNECT_STATUS_CONNECTED"> </a><h3>CONNECT_STATUS_CONNECTED</h3>
+<tt>CONSTANT <b>CONNECT_STATUS_CONNECTED</b> INTEGER = 2</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CONNECT_STATUS_CONNECTING"> </a><h3>CONNECT_STATUS_CONNECTING</h3>
+<tt>CONSTANT <b>CONNECT_STATUS_CONNECTING</b> INTEGER = 1</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CONNECT_STATUS_DISCONNECTED"> </a><h3>CONNECT_STATUS_DISCONNECTED</h3>
+<tt>CONSTANT <b>CONNECT_STATUS_DISCONNECTED</b> INTEGER = 3</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CONNECT_STATUS_FAILED"> </a><h3>CONNECT_STATUS_FAILED</h3>
+<tt>CONSTANT <b>CONNECT_STATUS_FAILED</b> INTEGER = 5</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="CONNECT_STATUS_UNDEFINED"> </a><h3>CONNECT_STATUS_UNDEFINED</h3>
+<tt>CONSTANT <b>CONNECT_STATUS_UNDEFINED</b> INTEGER = 0</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="DISCOVER_STATUS_DISCOVERED"> </a><h3>DISCOVER_STATUS_DISCOVERED</h3>
+<tt>CONSTANT <b>DISCOVER_STATUS_DISCOVERED</b> INTEGER = 1</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="DISCOVER_STATUS_FAILED"> </a><h3>DISCOVER_STATUS_FAILED</h3>
+<tt>CONSTANT <b>DISCOVER_STATUS_FAILED</b> INTEGER = 2</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="DISCOVER_STATUS_UNDEFINED"> </a><h3>DISCOVER_STATUS_UNDEFINED</h3>
+<tt>CONSTANT <b>DISCOVER_STATUS_UNDEFINED</b> INTEGER = 0</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="INIT_MODE_CENTRAL"> </a><h3>INIT_MODE_CENTRAL</h3>
+<tt>CONSTANT <b>INIT_MODE_CENTRAL</b> INTEGER = 1</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="INIT_MODE_PERIPHERAL"> </a><h3>INIT_MODE_PERIPHERAL</h3>
+<tt>CONSTANT <b>INIT_MODE_PERIPHERAL</b> INTEGER = 2</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="INIT_STATUS_DISABLED"> </a><h3>INIT_STATUS_DISABLED</h3>
+<tt>CONSTANT <b>INIT_STATUS_DISABLED</b> INTEGER = 0</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="INIT_STATUS_ENABLED"> </a><h3>INIT_STATUS_ENABLED</h3>
+<tt>CONSTANT <b>INIT_STATUS_ENABLED</b> INTEGER = 2</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="INIT_STATUS_FAILED"> </a><h3>INIT_STATUS_FAILED</h3>
+<tt>CONSTANT <b>INIT_STATUS_FAILED</b> INTEGER = 3</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="INIT_STATUS_INITIALIZING"> </a><h3>INIT_STATUS_INITIALIZING</h3>
+<tt>CONSTANT <b>INIT_STATUS_INITIALIZING</b> INTEGER = 1</tt><dl>
 <dd></dd>
 <dd><dl></dl></dd>
 </dl>
@@ -299,6 +998,102 @@
 <dd><dl></dl></dd>
 </dl>
 <hr>
+<a id="SCAN_STATUS_FAILED"> </a><h3>SCAN_STATUS_FAILED</h3>
+<tt>CONSTANT <b>SCAN_STATUS_FAILED</b> INTEGER = 5</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SCAN_STATUS_NOT_READY"> </a><h3>SCAN_STATUS_NOT_READY</h3>
+<tt>CONSTANT <b>SCAN_STATUS_NOT_READY</b> INTEGER = 0</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SCAN_STATUS_READY"> </a><h3>SCAN_STATUS_READY</h3>
+<tt>CONSTANT <b>SCAN_STATUS_READY</b> INTEGER = 1</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SCAN_STATUS_RESULTS"> </a><h3>SCAN_STATUS_RESULTS</h3>
+<tt>CONSTANT <b>SCAN_STATUS_RESULTS</b> INTEGER = 6</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SCAN_STATUS_STARTED"> </a><h3>SCAN_STATUS_STARTED</h3>
+<tt>CONSTANT <b>SCAN_STATUS_STARTED</b> INTEGER = 3</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SCAN_STATUS_STARTING"> </a><h3>SCAN_STATUS_STARTING</h3>
+<tt>CONSTANT <b>SCAN_STATUS_STARTING</b> INTEGER = 2</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SCAN_STATUS_STOPPED"> </a><h3>SCAN_STATUS_STOPPED</h3>
+<tt>CONSTANT <b>SCAN_STATUS_STOPPED</b> INTEGER = 4</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SERVICE_DEVICE_INFORMATION"> </a><h3>SERVICE_DEVICE_INFORMATION</h3>
+<tt>CONSTANT <b>SERVICE_DEVICE_INFORMATION</b> STRING = "180A"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SERVICE_GENERIC_ACCESS"> </a><h3>SERVICE_GENERIC_ACCESS</h3>
+<tt>CONSTANT <b>SERVICE_GENERIC_ACCESS</b> STRING = "1800"</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SUBSCRIBE_STATUS_FAILED"> </a><h3>SUBSCRIBE_STATUS_FAILED</h3>
+<tt>CONSTANT <b>SUBSCRIBE_STATUS_FAILED</b> INTEGER = 5</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SUBSCRIBE_STATUS_READY"> </a><h3>SUBSCRIBE_STATUS_READY</h3>
+<tt>CONSTANT <b>SUBSCRIBE_STATUS_READY</b> INTEGER = 1</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SUBSCRIBE_STATUS_RESULTS"> </a><h3>SUBSCRIBE_STATUS_RESULTS</h3>
+<tt>CONSTANT <b>SUBSCRIBE_STATUS_RESULTS</b> INTEGER = 6</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SUBSCRIBE_STATUS_SUBSCRIBED"> </a><h3>SUBSCRIBE_STATUS_SUBSCRIBED</h3>
+<tt>CONSTANT <b>SUBSCRIBE_STATUS_SUBSCRIBED</b> INTEGER = 3</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SUBSCRIBE_STATUS_SUBSCRIBING"> </a><h3>SUBSCRIBE_STATUS_SUBSCRIBING</h3>
+<tt>CONSTANT <b>SUBSCRIBE_STATUS_SUBSCRIBING</b> INTEGER = 2</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SUBSCRIBE_STATUS_UNDEFINED"> </a><h3>SUBSCRIBE_STATUS_UNDEFINED</h3>
+<tt>CONSTANT <b>SUBSCRIBE_STATUS_UNDEFINED</b> INTEGER = 0</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="SUBSCRIBE_STATUS_UNSUBSCRIBED"> </a><h3>SUBSCRIBE_STATUS_UNSUBSCRIBED</h3>
+<tt>CONSTANT <b>SUBSCRIBE_STATUS_UNSUBSCRIBED</b> INTEGER = 4</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
 <h2>Variables</h2>
 <a id="initOptions"> </a><h3>initOptions</h3>
 <tt>DEFINE <b>initOptions</b> <a href="#InitOptionsT">InitOptionsT</a></tt><dl>
@@ -315,14 +1110,237 @@
 <h2>Functions</h2>
 <a id="askForCoarseLocationPermission"> </a><h3>askForCoarseLocationPermission</h3>
 <tt>FUNCTION <b>askForCoarseLocationPermission</b>() RETURNS BOOLEAN</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
+<dd>
+<p> If not allowed, ask permission for coarse location (Android).</p>
+<p> Note that this function is called automatically when doing a startScan().</p>
+</dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if coarse location is allowed, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canClose"> </a><h3>canClose</h3>
+<tt>FUNCTION <b>canClose</b>(address STRING)</tt><dl>
+<dd>
+<p> Indicates if it is possible to close the connection from the specified device.</p>
+<p> It is not possible to close a connection if subscriptions are active.</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if close is possible, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canConnect"> </a><h3>canConnect</h3>
+<tt>FUNCTION <b>canConnect</b>(address STRING) RETURNS BOOLEAN</tt><dl>
+<dd>
+<p> Indicates if connection to the specified device address is possible.</p>
+<p> Connection is not possible if scanning was not done.</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if connection is possible, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canDiscover"> </a><h3>canDiscover</h3>
+<tt>FUNCTION <b>canDiscover</b>(address STRING) RETURNS BOOLEAN</tt><dl>
+<dd><p> Indicates if it is possible to discover device services.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if discovery is possible, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canInitialize"> </a><h3>canInitialize</h3>
+<tt>FUNCTION <b>canInitialize</b>() RETURNS BOOLEAN</tt><dl>
+<dd><p> Indicates if the BLE plugin can be initialized.</p></dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>TRUE when initialization is possible, FALSE otherwise.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canStartScan"> </a><h3>canStartScan</h3>
+<tt>FUNCTION <b>canStartScan</b>() RETURNS BOOLEAN</tt><dl>
+<dd>
+<p> Indicates if BLE device scanning is possible.</p>
+<p> This function is typically called to enable/disable dialog actions depending on the current states.</p>
+</dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if scanning is possible, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canStopScan"> </a><h3>canStopScan</h3>
+<tt>FUNCTION <b>canStopScan</b>() RETURNS BOOLEAN</tt><dl>
+<dd>
+<p> Indicates if BLE device scanning can be stopped.</p>
+<p> This function is typically called to enable/disable dialog actions depending on the current states.</p>
+</dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if stop scanning is possible, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canSubscribe"> </a><h3>canSubscribe</h3>
+<tt>FUNCTION <b>canSubscribe</b>(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN</tt><dl>
+<dd><p> Indicates if subscription to the specified characteristic is possible.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if subscription is possible, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="canUnsubscribe"> </a><h3>canUnsubscribe</h3>
+<tt>FUNCTION <b>canUnsubscribe</b>(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN</tt><dl>
+<dd><p> Indicates if it is possible to unsubscribe to a characteristic.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if unsubscription is possible, otherwise FALSE.<br>
+</dd>
+</dl></dd>
 </dl>
 <hr>
 <a id="clearCallbackBuffer"> </a><h3>clearCallbackBuffer</h3>
 <tt>FUNCTION <b>clearCallbackBuffer</b>()</tt><dl>
-<dd></dd>
+<dd><p> Clears the internal buffer for callback data records.</p></dd>
 <dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="clearScanResultBuffer"> </a><h3>clearScanResultBuffer</h3>
+<tt>FUNCTION <b>clearScanResultBuffer</b>()</tt><dl>
+<dd><p> Clears the internal buffer for scan results.</p></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="clearSubscriptionResultBuffer"> </a><h3>clearSubscriptionResultBuffer</h3>
+<tt>FUNCTION <b>clearSubscriptionResultBuffer</b>()</tt><dl>
+<dd><p> Cleanup subscription result buffer.</p></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="close"> </a><h3>close</h3>
+<tt>FUNCTION <b>close</b>(address STRING) RETURNS SMALLINT</tt><dl>
+<dd>
+<p> Close the connection to a device.</p>
+<p> Check if close is possible with the canClose(address) function.</p>
+<p> The close is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of the BLE device to disconnect, as returned in scan results.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="connect"> </a><h3>connect</h3>
+<tt>FUNCTION <b>connect</b>(address STRING) RETURNS SMALLINT</tt><dl>
+<dd>
+<p> Connect to the BLE device identified by its address.</p>
+<p> After scanning for BLE devices, call this function to connect to one of the devices.</p>
+<p> Check if connect is possible with the canConnect(address) function.</p>
+<p> The connection is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().</p>
+<p> If a first connection failed or was closed, call this function again to try to reconnect.</p>
+<p> Check the connection status with the getConnectionStatus(address) function:</p>
+<p> - CONNECT_STATUS_UNDEFINED : Not yet connected</p>
+<p> - CONNECT_STATUS_CONNECTING : Connection is in progress</p>
+<p> - CONNECT_STATUS_CONNECTED : Connected to the device</p>
+<p> - CONNECT_STATUS_DISCONNECTED : Disconnected from the device</p>
+<p> - CONNECT_STATUS_CLOSED : Connection was closed</p>
+<p> - CONNECT_STATUS_FAILED : Connection failed</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of the BLE device to connect to, as returned in scan results.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="connectStatusToString"> </a><h3>connectStatusToString</h3>
+<tt>FUNCTION <b>connectStatusToString</b>(s SMALLINT) RETURNS STRING</tt><dl>
+<dd><p> Provides a display text corresponding to the connection status.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>s</code> - the connection status (from getConnectionStatus() for example)<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>the connection status as text.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="discover"> </a><h3>discover</h3>
+<tt>FUNCTION <b>discover</b>(address STRING) RETURNS SMALLINT</tt><dl>
+<dd>
+<p> Fetch available services and characteritics from the specified device.</p>
+<p> This call is synchronous (result does not need to be handled with cordovacallback action)</p>
+<p> After calling this function successfully, use the getDiscoveryResults() function to
+ get service and characteristic information of the discovered devices.</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="discoveryStatusToString"> </a><h3>discoveryStatusToString</h3>
+<tt>FUNCTION <b>discoveryStatusToString</b>(s SMALLINT) RETURNS STRING</tt><dl>
+<dd><p> Provides a display text corresponding to the discovery status.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>s</code> - the discovery status (from getDiscoveryStatus() for example)<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>the discovery status as text.<br>
+</dd>
+</dl></dd>
 </dl>
 <hr>
 <a id="fini"> </a><h3>fini</h3>
@@ -334,21 +1352,232 @@
 <dd><dl></dl></dd>
 </dl>
 <hr>
-<a id="getCallbackData"> </a><h3>getCallbackData</h3>
-<tt>FUNCTION <b>getCallbackData</b>(bge <a href="#BgEventArrayT">BgEventArrayT</a>)</tt><dl>
-<dd></dd>
+<a id="getCallbackDataEvents"> </a><h3>getCallbackDataEvents</h3>
+<tt>FUNCTION <b>getCallbackDataEvents</b>(bge <a href="#BgEventArrayT">BgEventArrayT</a>)</tt><dl>
+<dd><p> Provides all callback data records collected.</p></dd>
 <dd><dl>
 <dt><b>Parameters:</b></dt>
 <dd>
-<code>bge</code> - <br>
+<code>bge</code> - the array of background events to fill.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getCharacteristicPermissions"> </a><h3>getCharacteristicPermissions</h3>
+<tt>FUNCTION <b>getCharacteristicPermissions</b>(address STRING, service STRING, characteristic STRING) RETURNS <a href="#PermissionsT">PermissionsT</a></tt><dl>
+<dd><p> Provides all permissions of a service characteristic.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>the set of characteristic permissions.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getCharacteristicProperties"> </a><h3>getCharacteristicProperties</h3>
+<tt>FUNCTION <b>getCharacteristicProperties</b>(address STRING, service STRING, characteristic STRING) RETURNS <a href="#CharacteristicPropertiesT">CharacteristicPropertiesT</a></tt><dl>
+<dd><p> Provides all properties of a service characteristic.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>the set of characteristic properties.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getConnectStatus"> </a><h3>getConnectStatus</h3>
+<tt>FUNCTION <b>getConnectStatus</b>(address STRING) RETURNS SMALLINT</tt><dl>
+<dd><p> Provides the current connection status for the given device address.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>CONNECTION_STATUS_* values.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getDiscoveryName"> </a><h3>getDiscoveryName</h3>
+<tt>FUNCTION <b>getDiscoveryName</b>(address STRING) RETURNS STRING</tt><dl>
+<dd><p> Provides the name of the discovered device.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>device name.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getDiscoveryResults"> </a><h3>getDiscoveryResults</h3>
+<tt>FUNCTION <b>getDiscoveryResults</b>(drd <a href="#DiscoverDictionaryT">DiscoverDictionaryT</a>)</tt><dl>
+<dd><p> Returns discovery results for all discovered devices.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>drd</code> - the array to hold discovery results.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getDiscoveryStatus"> </a><h3>getDiscoveryStatus</h3>
+<tt>FUNCTION <b>getDiscoveryStatus</b>(address STRING) RETURNS SMALLINT</tt><dl>
+<dd><p> Provides the discovery status for the given device address.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>DISCOVERY_STATUS_* values.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getInitializationStatus"> </a><h3>getInitializationStatus</h3>
+<tt>FUNCTION <b>getInitializationStatus</b>() RETURNS SMALLINT</tt><dl>
+<dd><p> Provides the initialization status.</p></dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>INIT_STATUS_* values.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getLastErrorInfo"> </a><h3>getLastErrorInfo</h3>
+<tt>FUNCTION <b>getLastErrorInfo</b>() RETURNS util.JSONObject</tt><dl>
+<dd><p> Provides the JSON object containing last error information.</p></dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>the JSON object with error info, or NULL of no error<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getLastErrorMessage"> </a><h3>getLastErrorMessage</h3>
+<tt>FUNCTION <b>getLastErrorMessage</b>() RETURNS STRING</tt><dl>
+<dd><p> Provides the description of the last error.</p></dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>the error message.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getNewScanResults"> </a><h3>getNewScanResults</h3>
+<tt>FUNCTION <b>getNewScanResults</b>(sra <a href="#ScanResultArrayT">ScanResultArrayT</a>)</tt><dl>
+<dd><p> Provides new scan results collected since the last call to this function.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>sra</code> - the array of scan results to fill.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getScanResults"> </a><h3>getScanResults</h3>
+<tt>FUNCTION <b>getScanResults</b>(sra <a href="#ScanResultArrayT">ScanResultArrayT</a>)</tt><dl>
+<dd><p> Provides all scan results collected during the BLE scan.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>sra</code> - the array of scan results to fill.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getScanStatus"> </a><h3>getScanStatus</h3>
+<tt>FUNCTION <b>getScanStatus</b>() RETURNS SMALLINT</tt><dl>
+<dd><p> Provides the current scan status.</p></dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>SCAN_STATUS_* values.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getSubscriptionResults"> </a><h3>getSubscriptionResults</h3>
+<tt>FUNCTION <b>getSubscriptionResults</b>(sra <a href="#SubscribeResultArrayT">SubscribeResultArrayT</a>)</tt><dl>
+<dd>
+<p> Returns subscription results for all subscribed characteristics.</p>
+<p> Results can be filtered by using the .address, .service and .characteristic
+ members of the array record.</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>sra</code> - the array to hold subscription results.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getSubscriptionStatus"> </a><h3>getSubscriptionStatus</h3>
+<tt>FUNCTION <b>getSubscriptionStatus</b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT</tt><dl>
+<dd><p> Provides the subscription status for a given characteristic.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>SUBSCRIBE_STATUS_* values.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="hasActiveSubscriptions"> </a><h3>hasActiveSubscriptions</h3>
+<tt>FUNCTION <b>hasActiveSubscriptions</b>(address STRING) RETURNS BOOLEAN</tt><dl>
+<dd>
+<p> Indicates if subscriptions are currently active for the specified device.</p>
+<p> After subscribing to a service/characteristic, you need first to unsubscribe
+ before closing the connection to the device.</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if this device is used for subscriptions, otherwise FALSE.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="hasCharacteristic"> </a><h3>hasCharacteristic</h3>
+<tt>FUNCTION <b>hasCharacteristic</b>(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN</tt><dl>
+<dd><p> Indicates if the BLE device has a specific service characteristic.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE the characteristic is available, otherwise FALSE.<br>
 </dd>
 </dl></dd>
 </dl>
 <hr>
 <a id="hasCoarseLocationPermission"> </a><h3>hasCoarseLocationPermission</h3>
 <tt>FUNCTION <b>hasCoarseLocationPermission</b>() RETURNS BOOLEAN</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
+<dd>
+<p> Checks if the current device allows coarse location (Android).</p>
+<p> Note that this function is called automatically when doing a startScan().</p>
+</dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>TRUE if coarse location is allowed, otherwise FALSE.<br>
+</dd>
+</dl></dd>
 </dl>
 <hr>
 <a id="init"> </a><h3>init</h3>
@@ -360,13 +1589,27 @@
 <dd><dl></dl></dd>
 </dl>
 <hr>
+<a id="initializationStatusToString"> </a><h3>initializationStatusToString</h3>
+<tt>FUNCTION <b>initializationStatusToString</b>(s SMALLINT) RETURNS STRING</tt><dl>
+<dd><p> Provides a display text corresponding to the initialization status.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>s</code> - the initialization status (from getInitializationStatus() for example)<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>the initialization status as text.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
 <a id="initialize"> </a><h3>initialize</h3>
 <tt>FUNCTION <b>initialize</b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER</tt><dl>
 <dd><p> Initializes BLE</p></dd>
 <dd><dl>
 <dt><b>Parameters:</b></dt>
 <dd>
-<code>initMode</code> - INIT_CENTRAL or INIT_PERIPHERAL<br><code>initOptions</code> - the initialization options of (see InitOptionsT)<br>
+<code>initMode</code> - INIT_MODE_CENTRAL (INIT_MODE_PERIPHERAL not supported yet)<br><code>initOptions</code> - the initialization options of (see InitOptionsT)<br>
 </dd>
 <dt><b>Returns:</b></dt>
 <dd>0 on success, &lt;0 if error.<br>
@@ -374,52 +1617,263 @@
 </dl></dd>
 </dl>
 <hr>
-<a id="isEnabled"> </a><h3>isEnabled</h3>
-<tt>FUNCTION <b>isEnabled</b>() RETURNS BOOLEAN</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
+<a id="isConnected"> </a><h3>isConnected</h3>
+<tt>FUNCTION <b>isConnected</b>(address STRING) RETURNS BOOLEAN</tt><dl>
+<dd><p> Checks if the given BLE device is connected.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - is the device address to check.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE when connected, otherwise FALSE.<br>
+</dd>
+</dl></dd>
 </dl>
 <hr>
 <a id="isInitialized"> </a><h3>isInitialized</h3>
 <tt>FUNCTION <b>isInitialized</b>() RETURNS BOOLEAN</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
+<dd><p> Checks if initialization is done.</p></dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>TRUE when initialized, otherwise FALSE.<br>
+</dd>
+</dl></dd>
 </dl>
 <hr>
 <a id="isScanning"> </a><h3>isScanning</h3>
 <tt>FUNCTION <b>isScanning</b>() RETURNS BOOLEAN</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
+<dd><p> Checks if BLE device scan is in progress.</p></dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>TRUE when scanning, otherwise FALSE.<br>
+</dd>
+</dl></dd>
 </dl>
 <hr>
 <a id="processCallbackEvents"> </a><h3>processCallbackEvents</h3>
-<tt>FUNCTION <b>processCallbackEvents</b>()</tt><dl>
+<tt>FUNCTION <b>processCallbackEvents</b>() RETURNS INTEGER</tt><dl>
 <dd>
 <p> Processes BluetoothLE Cordova plugin callback events</p>
-<p> </p>
+<p> This function has to be called in an ON ACTION cordovacallbak handler:
+ Some BLE calls like close as synchronous, while others need to be called
+ asynchroneously, where results are fetched with the callback mechanism.</p>
+<p>
+      <span><pre> ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
+    LET n = fglcdvBluetoothLE.processCallbackEvents()
+    IF n &gt;= 0 THEN
+       MESSAGE SFMT("%1 events processed.",n)
+    ELSE
+       ERROR SFMT("error %1 while processing callback results:\n%3",
+                   n, fglcdvBluetoothLE.getLastErrorMessage() )
+    END IF</pre></span>
+    </p>
 </dd>
 <dd><dl>
 <dt><b>Returns:</b></dt>
-<dd>&lt;0 if error. Otherwise, the number of callback data fetched.<br>
+<dd>&lt;0 if error. Otherwise, the number of callback data events processed.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="read"> </a><h3>read</h3>
+<tt>FUNCTION <b>read</b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT, STRING</tt><dl>
+<dd>
+<p> Read the value of the specified service characteristic.</p>
+<p> This call is synchronous (result does not need to be handled with cordovacallback action)</p>
+<p> The GATT characteristic value is encoded in Base64, and can be the representation
+ of some text, numeric or binary data.</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>1: &lt;0 in case of error, 0 if ok.<br>2: the Base64 encoded value.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="readDescriptor"> </a><h3>readDescriptor</h3>
+<tt>FUNCTION <b>readDescriptor</b>(address STRING, service STRING, characteristic STRING, descriptor STRING) RETURNS SMALLINT, STRING</tt><dl>
+<dd>
+<p> Read the value of the specified characteristic descriptor.</p>
+<p> This call is synchronous (result does not need to be handled with cordovacallback action)</p>
+<p> The GATT descriptor value is encoded in Base64, and can be the representation
+ of some text, numeric or binary data.</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br><code>descriptor</code> - the UUID of the GATT descriptor.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>1: &lt;0 in case of error, 0 if ok.<br>2: the Base64 encoded value.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="scanStatusToString"> </a><h3>scanStatusToString</h3>
+<tt>FUNCTION <b>scanStatusToString</b>(s SMALLINT) RETURNS STRING</tt><dl>
+<dd><p> Provides a display text corresponding to the scan status.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>s</code> - the scan status (from getScanStatus() for example)<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>the scan status as text.<br>
 </dd>
 </dl></dd>
 </dl>
 <hr>
 <a id="startScan"> </a><h3>startScan</h3>
 <tt>FUNCTION <b>startScan</b>(scanOptions <a href="#ScanOptionsT">ScanOptionsT</a>) RETURNS INTEGER</tt><dl>
-<dd></dd>
+<dd>
+<p> Starts BLE scanning</p>
+<p> When initialization is done, it is possible to scan for BLE devices.</p>
+<p> Check if scanning is possible with the canStartScan() function.</p>
+<p> Use the predefined fglcdvBluetoothLE.scanOptions module variable to define scan options.</p>
+<p> On Android, the function automatically asks for coarse location permission
+ if not currently granted. If this permission is denied by the user, the function
+ returns -2.</p>
+<p> The scan is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().</p>
+<p> Check the scanning status with the getScanStatus() function:</p>
+<p> - SCAN_STATUS_STARTED: The scan is starting, waiting for results.</p>
+<p> - SCAN_STATUS_RESULTS: Scan results are available with getScanResults().</p>
+<p>
+      <span><pre> INITIALIZE fglcdvBluetoothLE.scanOptions.* TO NULL
+ IF fen == "GMA" THEN
+    LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.SCAN_MODE_LOW_POWER
+    LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.MATCH_MODE_AGRESSIVE
+    LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.MATCH_NUM_ONE_ADVERTISEMENT
+    LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.CALLBACK_TYPE_ALL_MATCHES
+ ELSE
+    LET fglcdvBluetoothLE.scanOptions.allowDuplicates = FALSE
+ END IF
+ LET fglcdvBluetoothLE.scanOptions.services[1] = "180D"
+ LET fglcdvBluetoothLE.scanOptions.services[2] = "180F"
+ IF fglcdvBluetoothLE.startScan( fglcdvBluetoothLE.scanOptions.* ) &gt;= 0 THEN
+    MESSAGE "BluetoothLE scan started."
+ ELSE
+    ERROR "BluetoothLE scan failed to start."
+ END IF</pre></span>
+    </p>
+</dd>
 <dd><dl>
 <dt><b>Parameters:</b></dt>
 <dd>
-<code>scanOptions</code> - <br>
+<code>scanOptions</code> - a record of type ScanOptionsT to provide scan options.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
 </dd>
 </dl></dd>
 </dl>
 <hr>
 <a id="stopScan"> </a><h3>stopScan</h3>
 <tt>FUNCTION <b>stopScan</b>() RETURNS INTEGER</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
+<dd>
+<p> Stops BLE scanning</p>
+<p> After retrieving scan results from startScan(), stop scanning with stopScan().</p>
+<p> This call is synchronous (result does not need to be handled with cordovacallback action)</p>
+</dd>
+<dd><dl>
+<dt><b>Returns:</b></dt>
+<dd>SCAN_STATUS_STOPPED or SCAN_STATUS_FAILED.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="subscribe"> </a><h3>subscribe</h3>
+<tt>FUNCTION <b>subscribe</b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT</tt><dl>
+<dd>
+<p> Subscribes to a characteristic of the BLE device.</p>
+<p> After discovering BLE device services, it is possible to subscribe to characteristics
+ that have the notify and indicate properties (CharacteristicPropertiesT).</p>
+<p> To verify if subscription is possible for a given characteristic, use canSubscribe().</p>
+<p> The subscription is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().</p>
+<p> Check for available results with the getSubscriptionStatus() function:</p>
+<p> - SUBSCRIBE_STATUS_SUBSCRIBING : Subscription is in progress.</p>
+<p> - SUBSCRIBE_STATUS_SUBSCRIBED : Subscription is done.</p>
+<p> - SUBSCRIBE_STATUS_RESULTS : Results are available with getSubscriptionResults()</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="subscriptionStatusToString"> </a><h3>subscriptionStatusToString</h3>
+<tt>FUNCTION <b>subscriptionStatusToString</b>(s SMALLINT) RETURNS STRING</tt><dl>
+<dd><p> Provides a display text corresponding to the subscription status.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>s</code> - the subscription status (from getSubscriptionStatus() for example)<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>the subscription status as text.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="unsubscribe"> </a><h3>unsubscribe</h3>
+<tt>FUNCTION <b>unsubscribe</b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT</tt><dl>
+<dd>
+<p> Unsubscribes to a characteristic of the BLE device.</p>
+<p> After subscribing to a BLE device service, call this function to unsubscribe.</p>
+<p> To verify if unsubscription is possible for a given characteristic, use canUnsubscribe().</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="write"> </a><h3>write</h3>
+<tt>FUNCTION <b>write</b>(address STRING, service STRING, characteristic STRING, value STRING) RETURNS SMALLINT</tt><dl>
+<dd>
+<p> Write the value of the specified service characteristic.</p>
+<p> This call is synchronous (result does not need to be handled with cordovacallback action)</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br><code>value</code> - the GATT characteristic value in Base64 encoding.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="writeDescriptor"> </a><h3>writeDescriptor</h3>
+<tt>FUNCTION <b>writeDescriptor</b>(address STRING, service STRING, characteristic STRING, descriptor STRING, value STRING) RETURNS SMALLINT</tt><dl>
+<dd>
+<p> Write the value of the specified characteristic descriptor.</p>
+<p> This call is synchronous (result does not need to be handled with cordovacallback action)</p>
+</dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - the address of a BLE device.<br><code>service</code> - the UUID of the GATT service.<br><code>characteristic</code> - the UUID of the GATT characteristic.<br><code>descriptor</code> - the UUID of the GATT descriptor.<br><code>value</code> - the GATT descriptor value in Base64 encoding.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
 </dl>
 <hr>
 <table BORDER="0" CELLPADDING="0" CELLSPACING="3" SUMMARY=""><tr>

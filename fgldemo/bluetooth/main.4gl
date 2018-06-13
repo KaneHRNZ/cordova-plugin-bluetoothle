@@ -27,7 +27,8 @@ DEFINE chrcCombobox ui.ComboBox
 DEFINE descCombobox ui.ComboBox
 
 MAIN
-    DEFINE fen STRING, cnt, m, s, s2 INT
+    DEFINE fen, tmp STRING,
+           cnt, m, s, s2 INT
 
     LET fen = getFrontEndName()
 
@@ -228,11 +229,13 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION read ATTRIBUTES(TEXT="Read")
-       CALL fglcdvBluetoothLE.read(inforec.address, inforec.service, inforec.characteristic) RETURNING s, inforec.value
+       CALL fglcdvBluetoothLE.read(inforec.address, inforec.service, inforec.characteristic) RETURNING s, tmp
        IF s >= 0 THEN
           MESSAGE "BluetoothLE characteristic read done."
+          LET inforec.value = _base64_to_string(tmp)
        ELSE
           ERROR "BluetoothLE characteristic read failed."
+          LET inforec.value = NULL
        END IF
        CALL setup_dialog(DIALOG)
 
@@ -246,12 +249,13 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION descread ATTRIBUTES(TEXT="Read Desc.")
-       CALL fglcdvBluetoothLE.readDescriptor(inforec.address, inforec.service, inforec.characteristic, inforec.descriptor) RETURNING s, inforec.descvalue
+       CALL fglcdvBluetoothLE.readDescriptor(inforec.address, inforec.service, inforec.characteristic, inforec.descriptor) RETURNING s, tmp
        IF s >= 0 THEN
---display "Decoded value = ", _base64_to_string(inforec.descvalue)
           MESSAGE "BluetoothLE descriptor read done."
+          LET inforec.descvalue = _base64_to_string(tmp)
        ELSE
           ERROR "BluetoothLE descriptor read failed."
+          LET inforec.descvalue = NULL
        END IF
        CALL setup_dialog(DIALOG)
 
@@ -275,22 +279,27 @@ END MAIN
 -- the BDL util.Strings.base64DecodeToString() method.
 PRIVATE FUNCTION _base64_to_string(src STRING) RETURNS STRING
     DEFINE l, n SMALLINT
-    DEFINE tmp STRING
+    DEFINE tmp, res STRING
+    LET res = util.Strings.base64DecodeToString(src)
+    IF LENGTH(res)>0 THEN RETURN res END IF
+    -- Try to remove the trailing A chars...
     LET l = src.getLength()
     IF l > 1 THEN
        IF src.getCharAt(l) == "A" THEN
           LET tmp = src.subString(1,l-1)||"="
-          RETURN util.Strings.base64DecodeToString(tmp)
+          LET res = util.Strings.base64DecodeToString(tmp)
        END IF
     END IF
     IF l > 2 THEN
        IF src.subString(l-1,l) == "A=" THEN
           LET tmp = src.subString(1,l-2)||"=="
-          RETURN util.Strings.base64DecodeToString(tmp)
+          LET res = util.Strings.base64DecodeToString(tmp)
        END IF
     END IF
-    LET tmp = util.Strings.base64DecodeToString(src)
-    RETURN NVL(tmp, SFMT("(Base64: %1)",src))
+    IF res IS NULL THEN
+       RETURN SFMT("(Base64: %1)",src)
+    END IF
+    RETURN res
 END FUNCTION
 
 PRIVATE FUNCTION read_device_info(address STRING, mode SMALLINT, info_uuid STRING) RETURNS STRING
