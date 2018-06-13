@@ -56,6 +56,9 @@ MAIN
     ON IDLE 1
       CALL setup_dialog(DIALOG)
 
+    ON ACTION help ATTRIBUTES(TEXT="Help")
+       CALL show_help()
+
     ON ACTION initialize ATTRIBUTES(TEXT="Initialize")
        LET fglcdvBluetoothLE.initOptions.request=TRUE
        LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
@@ -232,7 +235,8 @@ MAIN
        CALL fglcdvBluetoothLE.read(inforec.address, inforec.service, inforec.characteristic) RETURNING s, tmp
        IF s >= 0 THEN
           MESSAGE "BluetoothLE characteristic read done."
-          LET inforec.value = _base64_to_string(tmp)
+display "value read = ", tmp
+          LET inforec.value = _base64_to_string("R",tmp)
        ELSE
           ERROR "BluetoothLE characteristic read failed."
           LET inforec.value = NULL
@@ -252,7 +256,7 @@ MAIN
        CALL fglcdvBluetoothLE.readDescriptor(inforec.address, inforec.service, inforec.characteristic, inforec.descriptor) RETURNING s, tmp
        IF s >= 0 THEN
           MESSAGE "BluetoothLE descriptor read done."
-          LET inforec.descvalue = _base64_to_string(tmp)
+          LET inforec.descvalue = _base64_to_string("R",tmp)
        ELSE
           ERROR "BluetoothLE descriptor read failed."
           LET inforec.descvalue = NULL
@@ -277,7 +281,7 @@ END MAIN
 -- Strings represented in Base64 can be returned with trailing A chars.
 -- This is not valid Base64 encoding and needs to be cleaned before using
 -- the BDL util.Strings.base64DecodeToString() method.
-PRIVATE FUNCTION _base64_to_string(src STRING) RETURNS STRING
+PRIVATE FUNCTION _base64_to_string(mode CHAR(1), src STRING) RETURNS STRING
     DEFINE l, n SMALLINT
     DEFINE tmp, res STRING
     LET res = util.Strings.base64DecodeToString(src)
@@ -285,19 +289,32 @@ PRIVATE FUNCTION _base64_to_string(src STRING) RETURNS STRING
     -- Try to remove the trailing A chars...
     LET l = src.getLength()
     IF l > 1 THEN
+       -- xxA => xx=
        IF src.getCharAt(l) == "A" THEN
           LET tmp = src.subString(1,l-1)||"="
           LET res = util.Strings.base64DecodeToString(tmp)
        END IF
     END IF
     IF l > 2 THEN
+       -- xxA= => xx==
        IF src.subString(l-1,l) == "A=" THEN
           LET tmp = src.subString(1,l-2)||"=="
           LET res = util.Strings.base64DecodeToString(tmp)
        END IF
     END IF
-    IF res IS NULL THEN
-       RETURN SFMT("(Base64: %1)",src)
+    IF l > 3 THEN
+       -- xxA== => xx
+       IF src.subString(l-2,l) == "A==" THEN
+          LET tmp = src.subString(1,l-3)
+          LET res = util.Strings.base64DecodeToString(tmp)
+       END IF
+    END IF
+    IF LENGTH(res)==0 THEN
+       IF mode=="V" THEN
+          LET res = SFMT("(Base64: %1)",src)
+       ELSE
+          LET res = src
+       END IF
     END IF
     RETURN res
 END FUNCTION
@@ -311,8 +328,7 @@ PRIVATE FUNCTION read_device_info(address STRING, mode SMALLINT, info_uuid STRIN
                                         fglcdvBluetoothLE.SERVICE_DEVICE_INFORMATION),
                                 info_uuid) RETURNING s, value
     IF s>=0 THEN
---display info_uuid, " = ", value
-       RETURN _base64_to_string(value)
+       RETURN _base64_to_string("V",value)
     END IF
     RETURN "???"
 END FUNCTION
@@ -330,7 +346,8 @@ PRIVATE FUNCTION show_device_info(address STRING)
                SFMT("    IEEE 11073 20601: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
                SFMT("    PnP ID: %1\n",            read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_PNP_ID))
 --display "Device info:", info
-    CALL show_text( info )
+    --CALL show_text( info )
+    CALL mbox_ok("Device info", info)
 END FUNCTION
 
 PRIVATE FUNCTION show_discovery(address STRING)
@@ -363,7 +380,7 @@ PRIVATE FUNCTION show_values(address STRING)
                   CALL fglcdvBluetoothLE.readDescriptor(address, s_uuids[s_x], c_uuids[c_x], "2901") RETURNING s, tmp
                   IF s>=0 THEN
                      IF getFrontEndName() == "GMA" THEN
-                        LET name = _base64_to_string(tmp)
+                        LET name = _base64_to_string("V",tmp)
                      ELSE
                         LET name = tmp
                      END IF
@@ -372,7 +389,7 @@ PRIVATE FUNCTION show_values(address STRING)
                IF discres[address].services[s_uuids[s_x]].characteristics[c_uuids[c_x]].properties.read THEN
                   CALL fglcdvBluetoothLE.read(address, s_uuids[s_x], c_uuids[c_x] ) RETURNING s, tmp
                   IF s>=0 THEN
-                     LET value = _base64_to_string(tmp)
+                     LET value = _base64_to_string("V",tmp)
                   ELSE
                      LET value = SFMT("<read failure: %1>", s)
                   END IF
@@ -696,4 +713,35 @@ PRIVATE FUNCTION getFrontEndName()
   DEFINE clientName STRING
   CALL ui.Interface.Frontcall("standard", "feinfo", ["fename"], [clientName])
   RETURN clientName
+END FUNCTION
+
+PRIVATE FUNCTION show_help()
+    CONSTANT tx =
+"
+BluetoothLE Cordova pluring demo\n
+\n
+Testing the TI SensorTag:\n
+\n
+1) Enable advertizing on the SensorTag (left side button, make sure led blinks)\n
+2) Initialize the BLE API\n
+3) Scan for BLE devices\n
+4) SensorTag should appear in the bottom text info field\n
+5) Stop scanning\n
+6) Select the SensorTag device in the address field\n
+7) Connect to the device (led should stop blinking)\n
+8) Discover services (eventually show/read discovery data)\n
+9) Select the temperature service (F000-AA00-...)\n
+10) Select the temperature configuration characteristic (F000-AA02-...)\n
+11) Read the value (should be AA==)\n
+12) Change value to enable temperature sensor with AQ== (0x01)\n
+13) Write the config value\n
+14) Select the temperature data characteristic (F000-AA01-...)\n
+15) Read the value (should be something like vv6kDQ== )\n
+16) Now you can also subscribe to this characteristic => subscribe\n
+17) Wait a bit to get results\n
+18) Unsubscribe\n
+20) Show subscription results\n
+21) Close the BLE connection\n
+"
+    CALL show_text(tx)
 END FUNCTION
