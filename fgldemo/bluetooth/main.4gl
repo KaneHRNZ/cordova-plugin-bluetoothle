@@ -28,7 +28,8 @@ DEFINE descCombobox ui.ComboBox
 
 MAIN
     DEFINE fen, tmp STRING,
-           cnt, m, s, s2 INT
+           cnt, m, s INT,
+           cs, us DYNAMIC ARRAY OF INT
 
     LET fen = getFrontEndName()
 
@@ -115,7 +116,8 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
-       LET s = fglcdvBluetoothLE.getConnectStatus(inforec.address)
+       LET cs[1] = fglcdvBluetoothLE.getConnectStatus(inforec.address)
+       LET us[1] = fglcdvBluetoothLE.getSubscriptionStatus(inforec.address,inforec.service,inforec.characteristic)
        LET cnt = fglcdvBluetoothLE.processCallbackEvents()
        IF cnt >= 0 THEN
           LET inforec.infomsg = SFMT(" %1: cordovacallback action : %2 events processed ",
@@ -124,9 +126,10 @@ MAIN
           ERROR SFMT(" %1: cordovacallback action :\nerror %2 while processing callback results:\n%3",
                      CURRENT HOUR TO FRACTION(3), cnt, fglcdvBluetoothLE.getLastErrorMessage() )
        END IF
-       LET s2 = fglcdvBluetoothLE.getConnectStatus(inforec.address)
-       IF s2 != s THEN -- Something happened with connection...
-          CASE s2
+       -- Connection status changes
+       LET cs[2] = fglcdvBluetoothLE.getConnectStatus(inforec.address)
+       IF cs[2] != cs[1] THEN -- Something happened with connection...
+          CASE cs[2]
           WHEN CONNECT_STATUS_FAILED
              IF mbox_yn("Connection", SFMT("BLE Connection to: \n%1\n has failed.\nDo you want to close the connection?",inforec.address)) THEN
                 LET s = fglcdvBluetoothLE.close(inforec.address)
@@ -134,6 +137,13 @@ MAIN
           WHEN CONNECT_STATUS_CONNECTED
              MESSAGE SFMT("Connected to %1", inforec.address)
           END CASE
+       END IF
+       -- Subscription status changes
+       LET us[2] = fglcdvBluetoothLE.getSubscriptionStatus(inforec.address,inforec.service,inforec.characteristic)
+       IF us[2] != us[1] THEN -- Something happened with subscription...
+          IF us[2] != SUBSCRIBE_STATUS_FAILED THEN
+             MESSAGE SFMT("Subscription status: %1", fglcdvBluetoothLE.subscriptionStatusToString(us[2]))
+          END IF
        END IF
        CALL fillAddressCombobox()
        CALL setup_dialog(DIALOG)
@@ -184,7 +194,7 @@ MAIN
 
     ON ACTION close ATTRIBUTES(TEXT="Close connection")
        IF fglcdvBluetoothLE.close(inforec.address) >= 0 THEN
-          MESSAGE "BluetoothLE connection close asked."
+          MESSAGE "BluetoothLE connection closed."
        ELSE
           ERROR "BluetoothLE connection close failed."
        END IF
@@ -311,32 +321,35 @@ PRIVATE FUNCTION _base64_to_string(mode CHAR(1), src STRING) RETURNS STRING
     RETURN res
 END FUNCTION
 
-PRIVATE FUNCTION read_device_info(address STRING, mode SMALLINT, info_uuid STRING) RETURNS STRING
-    DEFINE s SMALLINT,
-           tmp, value STRING
-    CALL fglcdvBluetoothLE.read(inforec.address,
-                                IIF(mode==1,
-                                        fglcdvBluetoothLE.SERVICE_GENERIC_ACCESS,
-                                        fglcdvBluetoothLE.SERVICE_DEVICE_INFORMATION),
-                                info_uuid) RETURNING s, value
-    IF s>=0 THEN
-       RETURN _base64_to_string("V",value)
+PRIVATE FUNCTION my_read(discres fglcdvBluetoothLE.DiscoverDictionaryT, address STRING, service STRING, characteristic STRING) RETURNS STRING
+    DEFINE s SMALLINT, value STRING
+    IF discres.contains(address) THEN
+       IF discres[address].services.contains(service) THEN
+          IF discres[address].services[service].characteristics.contains(characteristic) THEN
+             CALL fglcdvBluetoothLE.read(address, service, characteristic) RETURNING s, value
+             IF s>=0 THEN
+                RETURN _base64_to_string("V",value)
+             END IF
+          END IF
+       END IF
     END IF
     RETURN "???"
 END FUNCTION
 
 PRIVATE FUNCTION show_device_info(address STRING)
     DEFINE info STRING
-    LET info = SFMT("Device: %1 (%2)\n", read_device_info(address,1,fglcdvBluetoothLE.CARACTERISTIC_DEVICE_NAME), address),
-               SFMT("    System ID: %1\n",         read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_SYSTEM_ID)),
-               SFMT("    Model num: %1\n",         read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_MODEL_NUMBER_STRING)),
-               SFMT("    Serial num: %1\n",        read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_SERIAL_NUMBER_STRING)),
-               SFMT("    Firmware version: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_FIRMWARE_VERSION_STRING)),
-               SFMT("    Hardware version: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_HARDWARE_VERSION_STRING)),
-               SFMT("    Software version: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_SOFTWARE_VERSION_STRING)),
-               SFMT("    Manufacturer: %1\n",      read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_MANUFACTURER_NAME_STRING)),
-               SFMT("    IEEE 11073 20601: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
-               SFMT("    PnP ID: %1\n",            read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_PNP_ID))
+    DEFINE discres fglcdvBluetoothLE.DiscoverDictionaryT
+    CALL fglcdvBluetoothLE.getDiscoveryResults(discres)
+    LET info = SFMT("Device: %1 (%2)\n", discres[address].name, address),
+               SFMT("    System ID: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_SYSTEM_ID)),
+               SFMT("    Model num: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_MODEL_NUMBER_STRING)),
+               SFMT("    Serial num: %1\n",        my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_SERIAL_NUMBER_STRING)),
+               SFMT("    Firmware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_FIRMWARE_VERSION_STRING)),
+               SFMT("    Hardware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_HARDWARE_VERSION_STRING)),
+               SFMT("    Software version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_SOFTWARE_VERSION_STRING)),
+               SFMT("    Manufacturer: %1\n",      my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_MANUFACTURER_NAME_STRING)),
+               SFMT("    IEEE 11073 20601: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
+               SFMT("    PnP ID: %1\n",            my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_PNP_ID))
     CALL mbox_ok("Device info", info)
 END FUNCTION
 

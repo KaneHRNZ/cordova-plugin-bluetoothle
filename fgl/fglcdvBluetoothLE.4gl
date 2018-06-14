@@ -226,7 +226,7 @@ PRIVATE DEFINE subsStatus DICTIONARY OF SMALLINT
 PRIVATE DEFINE callbackIdInitialize STRING
 PRIVATE DEFINE callbackIdScan STRING
 PRIVATE DEFINE callbackIdConnect STRING
-PRIVATE DEFINE callbackIdClose STRING
+--PRIVATE DEFINE callbackIdClose STRING
 PRIVATE DEFINE callbackIdSubscribe DICTIONARY OF STRING
 
 PRIVATE DEFINE lastErrorInfo util.JSONObject
@@ -298,20 +298,10 @@ END FUNCTION
 
 PRIVATE FUNCTION _disconnectAll()
     DEFINE addrs DYNAMIC ARRAY OF STRING
-    DEFINE x INTEGER
-    DEFINE params RECORD
-               address STRING
-           END RECORD
-    DEFINE result STRING
+    DEFINE x, s INTEGER
     LET addrs = connStatus.getKeys()
     FOR x=1 TO addrs.getLength()
-        LET params.address = addrs[x]
-        TRY -- Just try sync close call, ignore errors.
-            CALL ui.Interface.frontCall("cordova", "call",
-                    [BLUETOOTHLEPLUGIN,"close",params],
-                    [result])
-display "fini close result:", result
-        END TRY
+        LET s = close(addrs[x])
     END FOR
 END FUNCTION
 
@@ -448,6 +438,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
         LET tot = tot + cnt
     END IF
 
+{
     LET cnt = _fetchCallbackEvents("close", callbackIdClose)
     IF cnt<0 THEN
         IF lastErrorInfo IS NOT NULL THEN
@@ -459,6 +450,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
     ELSE
         LET tot = tot + cnt
     END IF
+}
 
     LET sks = subsStatus.getKeys()
     FOR x=1 TO sks.getLength()
@@ -497,7 +489,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
             LET scanStatus = SCAN_STATUS_NOT_READY
         WHEN what=="scan"
             LET scanStatus = SCAN_STATUS_FAILED
-        WHEN what=="connect" OR what=="close"
+        WHEN what=="connect" --OR what=="close"
             IF lastErrorInfo IS NOT NULL THEN
                 IF lastErrorInfo.get("address") IS NOT NULL THEN
                     LET addr = lastErrorInfo.get("address")
@@ -561,6 +553,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
             OTHERWISE
                 LET connStatus[addr] = CONNECT_STATUS_FAILED
             END CASE
+{
         WHEN "close"
             LET addr = jsonResult.get("address")
             IF addr IS NULL THEN CALL _fatalError("close result: address field is null.") END IF
@@ -570,6 +563,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
             OTHERWISE
                 LET connStatus[addr] = CONNECT_STATUS_FAILED
             END CASE
+}
         WHEN "subscribe"
             LET addr = jsonResult.get("address")
             IF addr IS NULL THEN CALL _fatalError("subscribe result: address field is null.") END IF
@@ -1008,7 +1002,7 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
            END RECORD
     DEFINE command STRING
     CALL _check_lib_state(1)
-    CALL _cleanupDevice(address)
+    CALL _cleanupDeviceData(address)
     LET params.address = address
     LET params.autoConnect = FALSE -- (Android) we assume a scan was done.
     TRY
@@ -1032,7 +1026,7 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     RETURN 0
 END FUNCTION
 
-PRIVATE FUNCTION _cleanupDevice(address STRING)
+PRIVATE FUNCTION _cleanupDeviceData(address STRING)
     DEFINE arr DYNAMIC ARRAY OF STRING,
            x,alen,slen INTEGER,
            addr STRING
@@ -1053,8 +1047,6 @@ END FUNCTION
 #+
 #+ Check if close is possible with the canClose(address) function.
 #+
-#+ The close is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().
-#+
 #+ @param address the address of the BLE device to disconnect, as returned in scan results.
 #+
 #+ @return <0 in case of error, 0 if ok.
@@ -1062,18 +1054,31 @@ PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
     DEFINE params RECORD
                address STRING
            END RECORD
+    DEFINE result STRING
+    DEFINE jsonResult util.JSONObject
     CALL _check_lib_state(1)
     IF NOT canClose(address) THEN
        RETURN -2
     END IF
-    CALL _cleanupDevice(address)
+    CALL _cleanupDeviceData(address)
     LET params.address = address
     TRY
         LET lastConnAddr = address
+{ Sync call works...
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN,"close",params],
                 [callbackIdClose])
 --display "close   callbackIdClose = ", callbackIdClose
+}
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN,"close",params],
+                [result])
+        LET jsonResult = util.JSONObject.parse(result)
+        IF jsonResult.get("status") == "closed" THEN
+           LET connStatus[address] = CONNECT_STATUS_CLOSED
+        ELSE
+           LET connStatus[address] = CONNECT_STATUS_FAILED
+        END IF
     CATCH
         CALL _debug_error()
         RETURN -1
