@@ -88,6 +88,7 @@
       <File filePath="scanres.per"/>
       <File filePath="subsres.per"/>
       <File filePath="textinfo.per"/>
+      <File filePath="sensortag.per"/>
     </Application>
   </Group>
 </Project>

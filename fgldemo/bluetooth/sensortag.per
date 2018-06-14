@@ -1,0 +1,28 @@
+# Property of Four Js*
+# (c) Copyright Four Js 2017, 2017. All Rights Reserved.
+# * Trademark of Four Js Development Tools Europe Ltd
+#   in the United States and elsewhere
+#
+# Four Js and its suppliers do not warrant or guarantee that these
+# samples are accurate and suitable for your purposes. Their inclusion is
+# purely for information purposes only.
+
+LAYOUT
+GRID
+{
+[bs                                                  ]
+Process state:         [stat                         ]
+TI Sensor Tag address: [addr                         ]
+Timestamp:             [tmst                         ]
+Current temp:          [temp                         ]
+[bq                                                  ]
+}
+END
+ATTRIBUTES
+BUTTON bs: start, TEXT="Find device";
+BUTTON bq: quit, TEXT="End test";
+EDIT stat=FORMONLY.state, SCROLL;
+EDIT addr=FORMONLY.address, SCROLL;
+EDIT tmst=FORMONLY.timestamp;
+EDIT temp=FORMONLY.temperature;
+END

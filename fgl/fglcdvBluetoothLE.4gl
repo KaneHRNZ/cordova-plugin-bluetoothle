@@ -521,7 +521,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
         LET bgEvents[idx].timestamp  = CURRENT
         LET bgEvents[idx].callbackId = callbackId
         LET bgEvents[idx].result     = jsonResult.toString()
---display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
+display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
         CASE what
         WHEN "initialize"
             CASE jsonResult.get("status")
@@ -679,7 +679,7 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
             [callbackIdInitialize])
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
@@ -719,7 +719,7 @@ PRIVATE FUNCTION _syncCallRS(funcname STRING, resinfo STRING) RETURNS (SMALLINT,
         RETURN 0, jsonResult.get(resinfo)
     CATCH
         CALL _debug_error()
-        RETURN -1, NULL
+        RETURN -99, NULL
     END TRY
 END FUNCTION
 
@@ -876,7 +876,7 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
         LET scanStatus = SCAN_STATUS_STARTING
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
@@ -1021,7 +1021,7 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     CATCH
 --display sfmt("%1 failed!!", command)
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
@@ -1081,7 +1081,7 @@ PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
         END IF
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 
@@ -1317,7 +1317,7 @@ PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
         END IF
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
@@ -1485,7 +1485,7 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
                 [callbackIdSubscribe[sk]])
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
@@ -1553,7 +1553,7 @@ PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRIN
         END IF
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
@@ -1697,7 +1697,7 @@ PUBLIC FUNCTION read(address STRING, service STRING, characteristic STRING) RETU
         LET value = jsonObject.get("value")
     CATCH
         CALL _debug_error()
-        RETURN -1, NULL
+        RETURN -99, NULL
     END TRY
     RETURN 0, value
 END FUNCTION
@@ -1739,7 +1739,7 @@ PUBLIC FUNCTION write(address STRING, service STRING, characteristic STRING, val
         END IF
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
@@ -1782,7 +1782,7 @@ PUBLIC FUNCTION readDescriptor(address STRING, service STRING, characteristic ST
         LET value = jsonObject.get("value")
     CATCH
         CALL _debug_error()
-        RETURN -1, NULL
+        RETURN -99, NULL
     END TRY
     RETURN 0, value
 END FUNCTION
@@ -1827,7 +1827,7 @@ PUBLIC FUNCTION writeDescriptor(address STRING, service STRING, characteristic S
         END IF
     CATCH
         CALL _debug_error()
-        RETURN -1
+        RETURN -99
     END TRY
     RETURN 0
 END FUNCTION
