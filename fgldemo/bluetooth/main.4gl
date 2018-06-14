@@ -48,10 +48,10 @@ MAIN
       CALL setup_dialog(DIALOG)
 
     -- BLD Cordova callback events can happen asynchroneously even for basic
-    -- functions such as initialization, and connecting to a peer.
+    -- functions such as initialization, and connecting to a BLE device.
     -- Therefore, we need to query BLE statuses from time to time, to see
     -- where we are, and setup the possible actions.
-    -- We use functions of the BluetoothLE library, using local statuses to
+    -- We use functions of the BluetoothLE library, using local status info to
     -- avoid a Cordova front call like "isInitialized".
     ON IDLE 1
       CALL setup_dialog(DIALOG)
@@ -62,13 +62,6 @@ MAIN
     ON ACTION initialize ATTRIBUTES(TEXT="Initialize")
        LET fglcdvBluetoothLE.initOptions.request=TRUE
        LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
-{
-       MENU "Initialization" ATTRIBUTES(STYLE="popup")
-           COMMAND "Central"     LET m = fglcdvBluetoothLE.INIT_MODE_CENTRAL
-           COMMAND "Peripheral"  LET m = fglcdvBluetoothLE.INIT_MODE_PERIPHERAL
-           COMMAND "Cancel"      LET m = -1
-       END MENU
-}
        LET m = fglcdvBluetoothLE.INIT_MODE_CENTRAL
        IF m != -1 THEN
           IF fglcdvBluetoothLE.initialize(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN
@@ -235,7 +228,6 @@ MAIN
        CALL fglcdvBluetoothLE.read(inforec.address, inforec.service, inforec.characteristic) RETURNING s, tmp
        IF s >= 0 THEN
           MESSAGE "BluetoothLE characteristic read done."
-display "value read = ", tmp
           LET inforec.value = _base64_to_string("R",tmp)
        ELSE
           ERROR "BluetoothLE characteristic read failed."
@@ -345,8 +337,6 @@ PRIVATE FUNCTION show_device_info(address STRING)
                SFMT("    Manufacturer: %1\n",      read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_MANUFACTURER_NAME_STRING)),
                SFMT("    IEEE 11073 20601: %1\n",  read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
                SFMT("    PnP ID: %1\n",            read_device_info(address,2,fglcdvBluetoothLE.CARACTERISTIC_PNP_ID))
---display "Device info:", info
-    --CALL show_text( info )
     CALL mbox_ok("Device info", info)
 END FUNCTION
 
@@ -399,7 +389,6 @@ PRIVATE FUNCTION show_values(address STRING)
                CALL info.append(SFMT("     %1: %2\n", name, value))
            END FOR
        END FOR
---display info.toString()
        CALL show_text( info.toString() )
     END IF
 END FUNCTION
@@ -628,7 +617,6 @@ PRIVATE FUNCTION fillAddressCombobox()
   LET cnt = resarr.getLength()
   FOR x=1 TO cnt
       IF addrCombobox.getIndexOf(resarr[x].address) == 0 THEN
---display "  address: ", resarr[x].address
          CALL addrCombobox.addItem(resarr[x].address,resarr[x].name)
       END IF
   END FOR
@@ -653,7 +641,6 @@ PRIVATE FUNCTION fillServiceCombobox(address STRING)
      LET servarr = resdic[address].services.getKeys()
      LET cnt = servarr.getLength()
      FOR x=1 TO cnt
---display "    service: ", servarr[x]
          CALL servCombobox.addItem(servarr[x], NULL)
      END FOR
   END IF
@@ -677,7 +664,6 @@ PRIVATE FUNCTION fillCharacteristicCombobox(address STRING, service STRING)
         LET chrcarr = resdic[address].services[service].characteristics.getKeys()
         LET cnt = chrcarr.getLength()
         FOR x=1 TO cnt
---display "       characteristic: ", chrcarr[x]
             CALL chrcCombobox.addItem(chrcarr[x], NULL)
         END FOR
      END IF
@@ -701,7 +687,6 @@ PRIVATE FUNCTION fillDescriptorCombobox(address STRING, service STRING, characte
            LET descarr = resdic[address].services[service].characteristics[characteristic].descriptors.getKeys()
            LET cnt = descarr.getLength()
            FOR x=1 TO cnt
---display "       descriptor: ", descarr[x]
                CALL descCombobox.addItem(descarr[x], NULL)
            END FOR
         END IF
@@ -720,7 +705,7 @@ PRIVATE FUNCTION show_help()
 "
 BluetoothLE Cordova pluring demo\n
 \n
-Testing the TI SensorTag:\n
+Testing the TI CC2541 SensorTag:\n
 \n
 1) Enable advertizing on the SensorTag (left side button, make sure led blinks)\n
 2) Initialize the BLE API\n

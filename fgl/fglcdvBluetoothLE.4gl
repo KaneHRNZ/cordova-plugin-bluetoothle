@@ -278,6 +278,7 @@ END FUNCTION
 #+
 PUBLIC FUNCTION fini()
     IF initialized THEN
+        CALL _cleanup()
         CALL scanOptions.services.clear()
         CALL bgEvents.clear()
         CALL scanResultArray.clear()
@@ -292,10 +293,26 @@ PRIVATE FUNCTION _cleanup()
     IF canStopScan() THEN
        LET s = stopScan()
     END IF
-    -- FIXME: disconnect all
+    CALL _disconnectAll()
 END FUNCTION
 
 PRIVATE FUNCTION _disconnectAll()
+    DEFINE addrs DYNAMIC ARRAY OF STRING
+    DEFINE x INTEGER
+    DEFINE params RECORD
+               address STRING
+           END RECORD
+    DEFINE result STRING
+    LET addrs = connStatus.getKeys()
+    FOR x=1 TO addrs.getLength()
+        LET params.address = addrs[x]
+        TRY -- Just try sync close call, ignore errors.
+            CALL ui.Interface.frontCall("cordova", "call",
+                    [BLUETOOTHLEPLUGIN,"close",params],
+                    [result])
+display "fini close result:", result
+        END TRY
+    END FOR
 END FUNCTION
 
 PRIVATE FUNCTION _fatalError(msg STRING)
@@ -347,9 +364,9 @@ PRIVATE FUNCTION _extract_error_info()
         CALL _fatalError("Expecting error -6333.")
     END IF
     LET msg = err_get(STATUS)
-display "*** front call err_get: ", msg
+--display "*** front call err_get: ", msg
     LET msg = msg.subString(msg.getIndexOf("Reason:",1)+7,msg.getLength())
-display "*** front call error reason: ", msg
+--display "*** front call error reason: ", msg
     TRY
         LET err = util.JSONObject.parse(msg)
     CATCH
@@ -371,10 +388,10 @@ PRIVATE FUNCTION _getAllCallbackData(filter STRING)
 --display "getAllCallbackData        : ", _ts_diff()
     CATCH
         LET errinfo = _extract_error_info()
-display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
+--display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
         RETURN -1, NULL, errinfo
     END TRY
-display "  getAllCallbackData result: ", result
+--display "  getAllCallbackData result: ", result
     RETURN 0, results, NULL
 END FUNCTION
 
@@ -399,7 +416,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
     DEFINE cnt, tot, x INTEGER
     DEFINE sks DYNAMIC ARRAY OF STRING
 
-display "processCallbackEvents:"
+--display "processCallbackEvents:"
 
     LET tot = 0
 
@@ -470,7 +487,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
 
     IF callbackId IS NULL THEN RETURN 0 END IF
 
-display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
+--display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
     CALL _getAllCallbackData(callbackId) RETURNING s, jsonArray, lastErrorInfo
     IF s<0 THEN
         -- Cannot rely on lastErrorInfo: Sometimes we get {"message":"Unknown error."}
@@ -512,7 +529,7 @@ display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackI
         LET bgEvents[idx].timestamp  = CURRENT
         LET bgEvents[idx].callbackId = callbackId
         LET bgEvents[idx].result     = jsonResult.toString()
-display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
+--display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
         CASE what
         WHEN "initialize"
             CASE jsonResult.get("status")
@@ -666,17 +683,6 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
              IIF(initMode==INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
              initOptions],
             [callbackIdInitialize])
-{ FIXME?
-        CALL ui.Interface.frontCall("cordova", "call",
-            [BLUETOOTHLEPLUGIN,
-             IIF(initMode==INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
-             initOptions],
-            [result])
-display "initialize result: ", result
-        LET initStatus = INIT_STATUS_ENABLED
-        LET scanStatus = SCAN_STATUS_READY
-END IF
-}
     CATCH
         CALL _debug_error()
         RETURN -1
@@ -1017,9 +1023,9 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN, command, params],
                 [callbackIdConnect])
-display sfmt("%1 callbackIdConnect = %2", command, callbackIdConnect)
+--display sfmt("%1 callbackIdConnect = %2", command, callbackIdConnect)
     CATCH
-display sfmt("%1 failed!!", command)
+--display sfmt("%1 failed!!", command)
         CALL _debug_error()
         RETURN -1
     END TRY
@@ -1466,7 +1472,7 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
     LET params.characteristic = characteristic
     TRY
         LET sk = _subsKey(address, service, characteristic)
-display "subscribing : sk = ", sk
+--display "subscribing : sk = ", sk
         LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBING
         LET lastSubsSK = sk
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
