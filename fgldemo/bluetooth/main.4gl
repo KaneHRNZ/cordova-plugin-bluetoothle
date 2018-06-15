@@ -8,6 +8,10 @@
 # purely for information purposes only.
 
 IMPORT util
+&ifdef HAS_GWS
+IMPORT security
+&endif
+
 IMPORT FGL fgldialog
 IMPORT FGL fglcdvBluetoothLE
 
@@ -734,7 +738,8 @@ PRIVATE FUNCTION test_ti_sensor(address STRING) RETURNS STRING
              state STRING,
              address STRING,
              timestamp STRING,
-             temperature STRING
+             tempfar STRING,
+             tempcel STRING
          END RECORD
   DEFINE s, cnt, x INTEGER
   DEFINE resarr fglcdvBluetoothLE.SubscribeResultArrayT
@@ -768,7 +773,6 @@ display sfmt("continuing: state = %1", rec.state)
              END IF
              GOTO _check_state_ -- In dev mode, initialization may return immediately without callback event
           WHEN "init-done"
-display "init-done => scan status = ", fglcdvBluetoothLE.scanStatusToString( fglcdvBluetoothLE.getScanStatus() )
              IF fglcdvBluetoothLE.canStopScan() THEN -- from previous test
                 LET s = fglcdvBluetoothLE.stopScan()
              END IF
@@ -782,9 +786,7 @@ display "init-done => scan status = ", fglcdvBluetoothLE.scanStatusToString( fgl
                 LET fglcdvBluetoothLE.scanOptions.allowDuplicates = FALSE
              END IF
              LET rec.state = "scan-start"
-display "start scan..."
              IF fglcdvBluetoothLE.startScan( fglcdvBluetoothLE.scanOptions.* ) < 0 THEN
-display "start scan failed..."
                 ERROR "Scan start failed."
                 EXIT INPUT
              END IF
@@ -805,7 +807,6 @@ display "start scan failed..."
                 EXIT INPUT
              END IF
           WHEN "connect-done"
-display "connect-done => connect status = ", fglcdvBluetoothLE.connectStatusToString( fglcdvBluetoothLE.getConnectStatus(address) ), " / isConnected:", isConnected(address)
              LET rec.state = "discover-start"
              IF fglcdvBluetoothLE.discover(rec.address) < 0 THEN -- sync call
                 ERROR "Discovery failed."
@@ -830,7 +831,9 @@ display "connect-done => connect status = ", fglcdvBluetoothLE.connectStatusToSt
              LET x = resarr.getLength()
              IF x>0 THEN
                 LET rec.timestamp = EXTEND(resarr[x].timestamp, HOUR TO FRACTION(3))
-                LET rec.temperature = resarr[x].value
+display "value = ", resarr[x].value
+                LET rec.tempfar = _AA01_to_temp(resarr[x].value)
+                LET rec.tempcel = (rec.tempfar - 32) / 1.8
              END IF
              CALL fglcdvBluetoothLE.clearSubscriptionResultBuffer()
           END CASE
@@ -864,7 +867,6 @@ display sfmt("check state: %1", rec.state)
             OTHERWISE ERROR "Scan process failed." EXIT INPUT
             END CASE
           WHEN rec.state == "connect-start"
-display "   connect-start case:   connect status = ", fglcdvBluetoothLE.connectStatusToString( fglcdvBluetoothLE.getConnectStatus(rec.address) )
             CASE fglcdvBluetoothLE.getConnectStatus(rec.address)
             WHEN CONNECT_STATUS_DISCONNECTED LET rec.state = "connect-start"
             WHEN CONNECT_STATUS_CONNECTING   LET rec.state = "connect-start"
@@ -891,7 +893,6 @@ display "   connect-start case:   connect status = ", fglcdvBluetoothLE.connectS
      LET s = fglcdvBluetoothLE.unsubscribe(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
      LET s = fglcdvBluetoothLE.close(rec.address)
   END IF
-display " END : connect status = ", fglcdvBluetoothLE.connectStatusToString( fglcdvBluetoothLE.getConnectStatus(rec.address) )
 
   RETURN rec.address
 
@@ -908,6 +909,32 @@ display "found :", resarr[x].name
   END IF
   RETURN NULL
 END FUNCTION
+
+&ifdef HAS_GWS
+
+PRIVATE FUNCTION _AA01_to_temp(src STRING) RETURNS DECIMAL
+  DEFINE hexa VARCHAR(10)
+  TRY
+    LET hexa = security.Base64.ToHexBinary(src)
+display "hexa = ", hexa
+    IF LENGTH(hexa)!=8 THEN
+       DISPLAY "ERROR: Hexa value must be 4 bytes long"
+       RETURN NULL
+    END IF
+  CATCH
+    DISPLAY "ERROR: Could not convert Base64 to Hexa"
+    RETURN NULL
+  END TRY
+  RETURN 0.0
+END FUNCTION
+
+&else
+
+PRIVATE FUNCTION _AA01_to_temp(src STRING) RETURNS STRING
+  RETURN src
+END FUNCTION
+
+&endif
 
 PRIVATE FUNCTION show_help()
   CONSTANT tx =

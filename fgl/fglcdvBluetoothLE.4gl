@@ -761,6 +761,34 @@ PUBLIC FUNCTION isConnected(address STRING) RETURNS BOOLEAN
     END TRY
 END FUNCTION
 
+#+ Checks if the given BLE device was connected.
+#+
+#+ @param address is the device address to check.
+#+
+#+ @return TRUE when it was connected, otherwise FALSE.
+PUBLIC FUNCTION wasConnected(address STRING) RETURNS BOOLEAN
+    DEFINE params RECORD address STRING END RECORD
+    DEFINE jo util.JSONObject
+    DEFINE result STRING
+    CALL _check_lib_state(1)
+    LET params.address = address
+    TRY
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN,"wasConnected",params],[result])
+        LET jo = util.JSONObject.parse(result)
+        RETURN (jo.get("wasConnected"))
+    CATCH
+        LET jo = _extract_error_info()
+        IF jo IS NOT NULL THEN
+            IF jo.get("error")=="neverConnected" THEN
+                RETURN FALSE
+            END IF
+        END IF
+        CALL _debug_error()
+        RETURN FALSE
+    END TRY
+END FUNCTION
+
 #+ Checks if the current device allows coarse location (Android).
 #+
 #+ Note that this function is called automatically when doing a startScan().
@@ -1022,7 +1050,7 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     -- In dev mode (GMI), Cordova plugin remains loaded and devices connected from a prior
     -- session, so we always close the connection if already connected...
     IF NOT base.Application.isMobile() THEN
-       IF isConnected(address) THEN
+       IF wasConnected(address) THEN
           LET r = _close(address,FALSE)
        END IF
     END IF

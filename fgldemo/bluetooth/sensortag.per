@@ -11,22 +11,25 @@ LAYOUT
 GRID
 {
 [bs                           ]
-[lstate       |stat           ]
+[lstat        |stat           ]
 [laddr        |addr           ]
 [ltmst        |tmst           ]
-[ltemp        |temp           ]
+[ltmpf        |tmpf           ]
+[ltmpc        |tmpc           ]
 [bq                           ]
 }
 END
 ATTRIBUTES
 BUTTON bs: start, TEXT="Start test";
 BUTTON bq: cancel, TEXT="End test";
-LABEL lstate:TEXT="Process state";
-LABEL laddr:TEXT="Tag address";
-LABEL ltmst:TEXT="Time stamp";
-LABEL ltemp:TEXT="Current Temp";
+LABEL lstat:TEXT="State";
+LABEL laddr:TEXT="Device";
+LABEL ltmst:TEXT="Timestamp";
+LABEL ltmpf:TEXT="Temp (Far.)";
+LABEL ltmpc:TEXT="Temp (Cel.)";
 EDIT stat=FORMONLY.state, SCROLL, NOENTRY, PLACEHOLDER="";
 EDIT addr=FORMONLY.address, SCROLL, NOENTRY, PLACEHOLDER="";
 EDIT tmst=FORMONLY.timestamp,SCROLL, NOENTRY, PLACEHOLDER="";
-EDIT temp=FORMONLY.temperature, PLACEHOLDER="";
+EDIT tmpf=FORMONLY.tempfar, PLACEHOLDER="";
+EDIT tmpc=FORMONLY.tempcel, PLACEHOLDER="";
 END
