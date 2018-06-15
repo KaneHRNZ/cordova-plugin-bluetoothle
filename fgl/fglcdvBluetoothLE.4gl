@@ -381,7 +381,7 @@ PRIVATE FUNCTION _getAllCallbackData(filter STRING)
 display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
         RETURN -1, NULL, errinfo
     END TRY
-display "  getAllCallbackData result: ", result
+--display "  getAllCallbackData result: ", result
     RETURN 0, results, NULL
 END FUNCTION
 
@@ -1018,27 +1018,22 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     CALL _cleanupDeviceData(address)
     LET params.address = address
     LET params.autoConnect = FALSE -- (Android) we assume a scan was done.
---display "connect to: ", address
     LET command = "connect"
     -- In dev mode (GMI), Cordova plugin remains loaded and devices connected from a prior
     -- session, so we always close the connection if already connected...
     IF NOT base.Application.isMobile() THEN
        IF isConnected(address) THEN
           LET r = _close(address,FALSE)
-          LET command = "reconnect"
        END IF
     END IF
     TRY
         LET lastConnAddr = address
         IF connStatus.contains(address) THEN
-            IF connStatus[address]==CONNECT_STATUS_DISCONNECTED
-            OR connStatus[address]==CONNECT_STATUS_FAILED
-            THEN
+            IF connStatus[address]==CONNECT_STATUS_DISCONNECTED THEN
                 LET command = "reconnect"
             END IF
         END IF
         LET connStatus[address] = CONNECT_STATUS_CONNECTING
---display "connect command: ", command
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN, command, params],
                 [callbackIdConnect])

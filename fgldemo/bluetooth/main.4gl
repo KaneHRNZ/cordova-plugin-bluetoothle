@@ -277,7 +277,7 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION sensortag ATTRIBUTES(TEXT="TI Sensor Tag")
-       LET inforec.address = show_temp()
+       LET inforec.address = test_ti_sensor(inforec.address)
        CALL setup_dialog(DIALOG)
 
     END INPUT
@@ -726,7 +726,7 @@ END FUNCTION
 -- Here we use the TI SensorTag CC2541 (click left button on tag to enable advertizing!)
 -- We scan available BLE devices and check if the TI SensorTag is available.
 -- Note that we have to use a dialog to implement the cordovacallback action.
-PRIVATE FUNCTION show_temp()
+PRIVATE FUNCTION test_ti_sensor(address STRING) RETURNS STRING
   CONSTANT SERVICE_TEMP = "F000AA00-0451-4000-B000-000000000000"
   CONSTANT CHARACT_TEMP_VAL = "F000AA01-0451-4000-B000-000000000000"
   CONSTANT CHARACT_TEMP_CFG = "F000AA02-0451-4000-B000-000000000000"
@@ -742,6 +742,9 @@ PRIVATE FUNCTION show_temp()
   OPEN WINDOW wtis WITH FORM "sensortag"
 
   LET rec.state = "ready"
+  IF address IS NOT NULL THEN
+     LET rec.address = address
+  END IF
 
   INPUT BY NAME rec.* WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE)
 
@@ -765,6 +768,7 @@ display sfmt("continuing: state = %1", rec.state)
              END IF
              GOTO _check_state_ -- In dev mode, initialization may return immediately without callback event
           WHEN "init-done"
+display "init-done => scan status = ", fglcdvBluetoothLE.scanStatusToString( fglcdvBluetoothLE.getScanStatus() )
              IF fglcdvBluetoothLE.canStopScan() THEN -- from previous test
                 LET s = fglcdvBluetoothLE.stopScan()
              END IF
@@ -778,7 +782,9 @@ display sfmt("continuing: state = %1", rec.state)
                 LET fglcdvBluetoothLE.scanOptions.allowDuplicates = FALSE
              END IF
              LET rec.state = "scan-start"
+display "start scan..."
              IF fglcdvBluetoothLE.startScan( fglcdvBluetoothLE.scanOptions.* ) < 0 THEN
+display "start scan failed..."
                 ERROR "Scan start failed."
                 EXIT INPUT
              END IF
@@ -799,6 +805,7 @@ display sfmt("continuing: state = %1", rec.state)
                 EXIT INPUT
              END IF
           WHEN "connect-done"
+display "connect-done => connect status = ", fglcdvBluetoothLE.connectStatusToString( fglcdvBluetoothLE.getConnectStatus(address) ), " / isConnected:", isConnected(address)
              LET rec.state = "discover-start"
              IF fglcdvBluetoothLE.discover(rec.address) < 0 THEN -- sync call
                 ERROR "Discovery failed."
@@ -822,13 +829,13 @@ display sfmt("continuing: state = %1", rec.state)
              CALL fglcdvBluetoothLE.getSubscriptionResults( resarr )
              LET x = resarr.getLength()
              IF x>0 THEN
-                LET rec.timestamp = resarr[x].timestamp
+                LET rec.timestamp = EXTEND(resarr[x].timestamp, HOUR TO FRACTION(3))
                 LET rec.temperature = resarr[x].value
              END IF
              CALL fglcdvBluetoothLE.clearSubscriptionResultBuffer()
           END CASE
 
-       ON ACTION cordovacallback
+       ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
 display sfmt("cordovacallback: state = %1", rec.state)
 LABEL _process_callbacks_:
           LET cnt = fglcdvBluetoothLE.processCallbackEvents()
