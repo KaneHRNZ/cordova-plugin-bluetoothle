@@ -48,10 +48,10 @@ PUBLIC DEFINE initOptions InitOptionsT
 PUBLIC CONSTANT INIT_MODE_CENTRAL    = 1
 PUBLIC CONSTANT INIT_MODE_PERIPHERAL = 2
 
-PUBLIC CONSTANT INIT_STATUS_DISABLED    = 0
+PUBLIC CONSTANT INIT_STATUS_READY        = 0
 PUBLIC CONSTANT INIT_STATUS_INITIALIZING = 1
-PUBLIC CONSTANT INIT_STATUS_ENABLED     = 2
-PUBLIC CONSTANT INIT_STATUS_FAILED      = 3
+PUBLIC CONSTANT INIT_STATUS_INITIALIZED  = 2
+PUBLIC CONSTANT INIT_STATUS_FAILED       = 3
 
 PUBLIC CONSTANT SCAN_STATUS_NOT_READY = 0
 PUBLIC CONSTANT SCAN_STATUS_READY     = 1
@@ -60,6 +60,25 @@ PUBLIC CONSTANT SCAN_STATUS_STARTED   = 3
 PUBLIC CONSTANT SCAN_STATUS_STOPPED   = 4
 PUBLIC CONSTANT SCAN_STATUS_FAILED    = 5
 PUBLIC CONSTANT SCAN_STATUS_RESULTS   = 6
+
+PUBLIC CONSTANT CONNECT_STATUS_UNDEFINED    = 0
+PUBLIC CONSTANT CONNECT_STATUS_CONNECTING   = 1
+PUBLIC CONSTANT CONNECT_STATUS_CONNECTED    = 2
+PUBLIC CONSTANT CONNECT_STATUS_DISCONNECTED = 3
+PUBLIC CONSTANT CONNECT_STATUS_CLOSED       = 4
+PUBLIC CONSTANT CONNECT_STATUS_FAILED       = 5
+
+PUBLIC CONSTANT SUBSCRIBE_STATUS_UNDEFINED    = 0
+PUBLIC CONSTANT SUBSCRIBE_STATUS_READY        = 1
+PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBING  = 2
+PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBED   = 3
+PUBLIC CONSTANT SUBSCRIBE_STATUS_UNSUBSCRIBED = 4
+PUBLIC CONSTANT SUBSCRIBE_STATUS_FAILED       = 5
+PUBLIC CONSTANT SUBSCRIBE_STATUS_RESULTS      = 6
+
+PUBLIC CONSTANT DISCOVER_STATUS_UNDEFINED  = 0
+PUBLIC CONSTANT DISCOVER_STATUS_DISCOVERED = 1
+PUBLIC CONSTANT DISCOVER_STATUS_FAILED     = 2
 
 PUBLIC CONSTANT SCAN_MODE_OPPORTUNISTIC = -1
 PUBLIC CONSTANT SCAN_MODE_LOW_POWER     = 0
@@ -76,21 +95,6 @@ PUBLIC CONSTANT MATCH_NUM_MAX_ADVERTISEMENT = 3
 PUBLIC CONSTANT CALLBACK_TYPE_ALL_MATCHES = 1
 PUBLIC CONSTANT CALLBACK_TYPE_FIRST_MATCH = 2
 PUBLIC CONSTANT CALLBACK_TYPE_MATCH_LOST  = 4
-
-PUBLIC CONSTANT CONNECT_STATUS_UNDEFINED    = 0
-PUBLIC CONSTANT CONNECT_STATUS_CONNECTING   = 1
-PUBLIC CONSTANT CONNECT_STATUS_CONNECTED    = 2
-PUBLIC CONSTANT CONNECT_STATUS_DISCONNECTED = 3
-PUBLIC CONSTANT CONNECT_STATUS_CLOSED       = 4
-PUBLIC CONSTANT CONNECT_STATUS_FAILED       = 5
-
-PUBLIC CONSTANT SUBSCRIBE_STATUS_UNDEFINED    = 0
-PUBLIC CONSTANT SUBSCRIBE_STATUS_READY        = 1
-PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBING  = 2
-PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBED   = 3
-PUBLIC CONSTANT SUBSCRIBE_STATUS_UNSUBSCRIBED = 4
-PUBLIC CONSTANT SUBSCRIBE_STATUS_FAILED       = 5
-PUBLIC CONSTANT SUBSCRIBE_STATUS_RESULTS      = 6
 
 PUBLIC CONSTANT SERVICE_GENERIC_ACCESS                              = "1800"
 PUBLIC CONSTANT SERVICE_DEVICE_INFORMATION                          = "180A"
@@ -173,10 +177,6 @@ PUBLIC TYPE DiscoverT RECORD
         services ServiceDictionaryT
     END RECORD
 PUBLIC TYPE DiscoverDictionaryT DICTIONARY OF DiscoverT
-
-PUBLIC CONSTANT DISCOVER_STATUS_UNDEFINED  = 0
-PUBLIC CONSTANT DISCOVER_STATUS_DISCOVERED = 1
-PUBLIC CONSTANT DISCOVER_STATUS_FAILED     = 2
 
 -- Structure that covers Android and iOS scan result JSON records
 PUBLIC TYPE ScanResultT RECORD
@@ -265,7 +265,7 @@ PUBLIC FUNCTION init()
     LET scanOptions.matchNum = MATCH_NUM_ONE_ADVERTISEMENT
     LET scanOptions.callbackType = CALLBACK_TYPE_ALL_MATCHES
 
-    LET initStatus = INIT_STATUS_DISABLED -- BLE init status
+    LET initStatus = INIT_STATUS_READY -- BLE init status
     LET scanStatus = SCAN_STATUS_NOT_READY
 
     LET initialized = TRUE -- Lib init status
@@ -301,7 +301,7 @@ PRIVATE FUNCTION _disconnectAll()
     DEFINE x, s INTEGER
     LET addrs = connStatus.getKeys()
     FOR x=1 TO addrs.getLength()
-        LET s = close(addrs[x])
+        LET s = _close(addrs[x],FALSE)
     END FOR
 END FUNCTION
 
@@ -315,7 +315,7 @@ PRIVATE FUNCTION _check_lib_state(mode SMALLINT)
         CALL _fatalError("Library is not initialized.")
     END IF
     IF mode >= 1 THEN
-        IF initStatus == INIT_STATUS_ENABLED IS NULL THEN
+        IF initStatus == INIT_STATUS_INITIALIZED IS NULL THEN
             CALL _fatalError("BluetoothLE is not initialized.")
         END IF
     END IF
@@ -378,10 +378,10 @@ PRIVATE FUNCTION _getAllCallbackData(filter STRING)
 --display "getAllCallbackData        : ", _ts_diff()
     CATCH
         LET errinfo = _extract_error_info()
---display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
+display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
         RETURN -1, NULL, errinfo
     END TRY
---display "  getAllCallbackData result: ", result
+display "  getAllCallbackData result: ", result
     RETURN 0, results, NULL
 END FUNCTION
 
@@ -406,7 +406,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
     DEFINE cnt, tot, x INTEGER
     DEFINE sks DYNAMIC ARRAY OF STRING
 
---display "processCallbackEvents:"
+display "processCallbackEvents:"
 
     LET tot = 0
 
@@ -437,20 +437,6 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
     ELSE
         LET tot = tot + cnt
     END IF
-
-{
-    LET cnt = _fetchCallbackEvents("close", callbackIdClose)
-    IF cnt<0 THEN
-        IF lastErrorInfo IS NOT NULL THEN
-            IF lastErrorInfo.get("error")=="close" THEN
-                LET connStatus[lastErrorInfo.get("address")] = CONNECT_STATUS_FAILED
-            END IF
-        END IF
-        RETURN cnt
-    ELSE
-        LET tot = tot + cnt
-    END IF
-}
 
     LET sks = subsStatus.getKeys()
     FOR x=1 TO sks.getLength()
@@ -489,7 +475,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
             LET scanStatus = SCAN_STATUS_NOT_READY
         WHEN what=="scan"
             LET scanStatus = SCAN_STATUS_FAILED
-        WHEN what=="connect" --OR what=="close"
+        WHEN what=="connect"
             IF lastErrorInfo IS NOT NULL THEN
                 IF lastErrorInfo.get("address") IS NOT NULL THEN
                     LET addr = lastErrorInfo.get("address")
@@ -526,7 +512,7 @@ display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
         WHEN "initialize"
             CASE jsonResult.get("status")
             WHEN "enabled"
-                LET initStatus = INIT_STATUS_ENABLED
+                LET initStatus = INIT_STATUS_INITIALIZED
                 LET scanStatus = SCAN_STATUS_READY
             OTHERWISE
                 LET initStatus = INIT_STATUS_FAILED
@@ -553,17 +539,6 @@ display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
             OTHERWISE
                 LET connStatus[addr] = CONNECT_STATUS_FAILED
             END CASE
-{
-        WHEN "close"
-            LET addr = jsonResult.get("address")
-            IF addr IS NULL THEN CALL _fatalError("close result: address field is null.") END IF
-            CASE jsonResult.get("status")
-            WHEN "closed"
-                LET connStatus[addr] = CONNECT_STATUS_CLOSED
-            OTHERWISE
-                LET connStatus[addr] = CONNECT_STATUS_FAILED
-            END CASE
-}
         WHEN "subscribe"
             LET addr = jsonResult.get("address")
             IF addr IS NULL THEN CALL _fatalError("subscribe result: address field is null.") END IF
@@ -647,7 +622,7 @@ END FUNCTION
 #+ @return TRUE when initialization is possible, FALSE otherwise.
 PUBLIC FUNCTION canInitialize() RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    RETURN (initStatus == INIT_STATUS_DISABLED
+    RETURN (initStatus == INIT_STATUS_READY
          OR initStatus == INIT_STATUS_FAILED)
 END FUNCTION
 
@@ -664,14 +639,23 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
     IF callbackIdInitialize IS NOT NULL THEN
         RETURN -2
     END IF
-    IF initStatus != INIT_STATUS_DISABLED THEN
+    IF initStatus != INIT_STATUS_READY THEN
         RETURN -3
     END IF
     IF initMode!=INIT_MODE_CENTRAL THEN
         CALL _fatalError("Only central mode is supported for now.")
     END IF
+    -- In dev mode (GMI), Cordova plugin remains loaded...
+    IF NOT base.Application.isMobile() THEN
+       IF isInitialized() THEN
+          LET initStatus = INIT_STATUS_INITIALIZED
+          LET scanStatus = SCAN_STATUS_READY
+          RETURN 0
+       END IF
+    END IF
     TRY
         LET initStatus = INIT_STATUS_INITIALIZING
+        LET scanStatus = SCAN_STATUS_NOT_READY
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
             [BLUETOOTHLEPLUGIN,
              IIF(initMode==INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
@@ -698,9 +682,9 @@ END FUNCTION
 #+ @return the initialization status as text.
 PUBLIC FUNCTION initializationStatusToString(s SMALLINT) RETURNS STRING
     CASE s
-    WHEN INIT_STATUS_DISABLED     RETURN "Disabled"
+    WHEN INIT_STATUS_READY        RETURN "Ready"
     WHEN INIT_STATUS_INITIALIZING RETURN "Initializing"
-    WHEN INIT_STATUS_ENABLED      RETURN "Enabled"
+    WHEN INIT_STATUS_INITIALIZED  RETURN "Initialized"
     WHEN INIT_STATUS_FAILED       RETURN "Failed"
     OTHERWISE RETURN NULL
     END CASE
@@ -756,16 +740,22 @@ END FUNCTION
 #+ @return TRUE when connected, otherwise FALSE.
 PUBLIC FUNCTION isConnected(address STRING) RETURNS BOOLEAN
     DEFINE params RECORD address STRING END RECORD
-    DEFINE jsonResult util.JSONObject
+    DEFINE jo util.JSONObject
     DEFINE result STRING
     CALL _check_lib_state(1)
     LET params.address = address
     TRY
         CALL ui.Interface.frontCall("cordova", "call",
                 [BLUETOOTHLEPLUGIN,"isConnected",params],[result])
-        LET jsonResult = util.JSONObject.parse(result)
-        RETURN (jsonResult.get("isConnected"))
+        LET jo = util.JSONObject.parse(result)
+        RETURN (jo.get("isConnected"))
     CATCH
+        LET jo = _extract_error_info()
+        IF jo IS NOT NULL THEN
+            IF jo.get("error")=="neverConnected" THEN
+                RETURN FALSE
+            END IF
+        END IF
         CALL _debug_error()
         RETURN FALSE
     END TRY
@@ -856,9 +846,17 @@ END FUNCTION
 #+
 #+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
+    DEFINE r SMALLINT
     CALL _check_lib_state(1)
     IF NOT canStartScan() THEN
         RETURN -1
+    END IF
+    -- In dev mode (GMI), Cordova plugin remains loaded, must stop scan if still scanning
+    -- from a previous session...
+    IF NOT base.Application.isMobile() THEN
+       IF isScanning() THEN
+          LET r = _stopScan(FALSE)
+       END IF
     END IF
     -- On Android we always have to ask for permission
     IF _getFrontEndName() == "GMA" THEN
@@ -881,6 +879,27 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
     RETURN 0
 END FUNCTION
 
+PRIVATE FUNCTION _stopScan(errors BOOLEAN) RETURNS INTEGER
+    DEFINE result STRING
+    DEFINE jsonResult util.JSONObject
+    TRY
+        CALL ui.Interface.frontCall( "cordova", "call",
+                [BLUETOOTHLEPLUGIN,"stopScan"], [result] )
+        LET jsonResult = util.JSONObject.parse(result)
+        IF jsonResult.get("status")!="scanStopped" THEN
+           LET scanStatus = SCAN_STATUS_FAILED
+           RETURN -1
+        END IF
+    CATCH
+        IF errors THEN
+           CALL _debug_error()
+           RETURN -99
+        END IF
+    END TRY
+    LET scanStatus = SCAN_STATUS_STOPPED
+    RETURN 0
+END FUNCTION
+
 #+ Stops BLE scanning
 #+
 #+ After retrieving scan results from startScan(), stop scanning with stopScan().
@@ -889,19 +908,11 @@ END FUNCTION
 #+
 #+ @return SCAN_STATUS_STOPPED or SCAN_STATUS_FAILED.
 PUBLIC FUNCTION stopScan() RETURNS INTEGER
-    DEFINE r SMALLINT, v STRING
     CALL _check_lib_state(1)
     IF NOT canStopScan() THEN
         RETURN -1
     END IF
-    CALL _syncCallRS("stopScan","status") RETURNING r, v
-    IF r==0 AND v=="scanStopped" THEN
-       LET scanStatus = SCAN_STATUS_STOPPED
-       RETURN 0
-    ELSE
-       LET scanStatus = SCAN_STATUS_FAILED
-       RETURN -1
-    END IF
+    RETURN _stopScan(TRUE)
 END FUNCTION
 
 #+ Provides the current scan status.
@@ -1001,19 +1012,32 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
                autoConnect BOOLEAN
            END RECORD
     DEFINE command STRING
+    DEFINE r SMALLINT
     CALL _check_lib_state(1)
     CALL _cleanupDeviceData(address)
     LET params.address = address
     LET params.autoConnect = FALSE -- (Android) we assume a scan was done.
+--display "connect to: ", address
+    LET command = "connect"
+    -- In dev mode (GMI), Cordova plugin remains loaded and devices connected from a prior
+    -- session, so we always close the connection if already connected...
+    IF NOT base.Application.isMobile() THEN
+       IF isConnected(address) THEN
+          LET r = _close(address,FALSE)
+          LET command = "reconnect"
+       END IF
+    END IF
     TRY
-        LET command = "connect"
         LET lastConnAddr = address
         IF connStatus.contains(address) THEN
-            IF connStatus[address]==CONNECT_STATUS_FAILED THEN
+            IF connStatus[address]==CONNECT_STATUS_DISCONNECTED
+            OR connStatus[address]==CONNECT_STATUS_FAILED
+            THEN
                 LET command = "reconnect"
             END IF
         END IF
         LET connStatus[address] = CONNECT_STATUS_CONNECTING
+--display "connect command: ", command
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN, command, params],
                 [callbackIdConnect])
@@ -1043,6 +1067,37 @@ PRIVATE FUNCTION _cleanupDeviceData(address STRING)
     END FOR
 END FUNCTION
 
+PRIVATE FUNCTION _close(address STRING, errors BOOLEAN) RETURNS SMALLINT
+    DEFINE params RECORD
+               address STRING
+           END RECORD
+    DEFINE result STRING
+    DEFINE jsonResult util.JSONObject
+    CALL _check_lib_state(1)
+    CALL _cleanupDeviceData(address)
+    LET params.address = address
+    TRY
+        LET lastConnAddr = address
+        CALL ui.Interface.frontCall("cordova", "call",
+                [BLUETOOTHLEPLUGIN,"close",params],
+                [result])
+        LET jsonResult = util.JSONObject.parse(result)
+        IF jsonResult.get("status") == "closed" THEN
+            LET connStatus[address] = CONNECT_STATUS_CLOSED
+        ELSE
+            LET connStatus[address] = CONNECT_STATUS_FAILED
+        END IF
+    CATCH
+        IF errors THEN
+            CALL _debug_error()
+            RETURN -99
+        ELSE
+            LET connStatus[address] = CONNECT_STATUS_CLOSED
+        END IF
+    END TRY
+    RETURN 0
+END FUNCTION
+
 #+ Close the connection to a device.
 #+
 #+ Check if close is possible with the canClose(address) function.
@@ -1051,40 +1106,11 @@ END FUNCTION
 #+
 #+ @return <0 in case of error, 0 if ok.
 PUBLIC FUNCTION close(address STRING) RETURNS SMALLINT
-    DEFINE params RECORD
-               address STRING
-           END RECORD
-    DEFINE result STRING
-    DEFINE jsonResult util.JSONObject
     CALL _check_lib_state(1)
     IF NOT canClose(address) THEN
        RETURN -2
     END IF
-    CALL _cleanupDeviceData(address)
-    LET params.address = address
-    TRY
-        LET lastConnAddr = address
-{ Sync call works...
-        CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
-                [BLUETOOTHLEPLUGIN,"close",params],
-                [callbackIdClose])
---display "close   callbackIdClose = ", callbackIdClose
-}
-        CALL ui.Interface.frontCall("cordova", "call",
-                [BLUETOOTHLEPLUGIN,"close",params],
-                [result])
-        LET jsonResult = util.JSONObject.parse(result)
-        IF jsonResult.get("status") == "closed" THEN
-           LET connStatus[address] = CONNECT_STATUS_CLOSED
-        ELSE
-           LET connStatus[address] = CONNECT_STATUS_FAILED
-        END IF
-    CATCH
-        CALL _debug_error()
-        RETURN -99
-    END TRY
-    RETURN 0
-
+    RETURN _close(address,TRUE)
 END FUNCTION
 
 #+ Provides the current connection status for the given device address.
@@ -1126,7 +1152,7 @@ END FUNCTION
 #+ @return TRUE if connection is possible, otherwise FALSE.
 PUBLIC FUNCTION canConnect(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
+    IF initStatus!=INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
         RETURN (connStatus[address] == CONNECT_STATUS_FAILED
@@ -1172,7 +1198,7 @@ END FUNCTION
 #+ @return TRUE if close is possible, otherwise FALSE.
 PUBLIC FUNCTION canClose(address STRING)
     CALL _check_lib_state(0)
-    IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
+    IF initStatus!=INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
         -- Next statuses are valid to close for cleanup and connect again.
@@ -1300,6 +1326,7 @@ PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
                clearCache BOOLEAN
            END RECORD
     DEFINE result STRING
+--    DEFINE jsonResult util.JSONObject
     DEFINE s SMALLINT
     CALL _check_lib_state(1)
     IF NOT canDiscover(address) THEN
@@ -1316,6 +1343,15 @@ PUBLIC FUNCTION discover(address STRING) RETURNS SMALLINT
             RETURN s
         END IF
     CATCH
+{
+        -- In dev mode (GMI), Cordova plugin remains loaded and devices discovered from a prior
+        -- session, so we always close the connection if already connected...
+        IF NOT base.Application.isMobile() THEN
+            LET jsonResult = util.JSONObject.parse(result)
+            IF jsonResult.get("status") == "closed" THEN
+            END IF
+        END IF
+}
         CALL _debug_error()
         RETURN -99
     END TRY
@@ -1329,7 +1365,7 @@ END FUNCTION
 #+ @return TRUE if discovery is possible, otherwise FALSE.
 PUBLIC FUNCTION canDiscover(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    IF initStatus!=INIT_STATUS_ENABLED THEN RETURN FALSE END IF
+    IF initStatus!=INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
         RETURN (connStatus[address] == CONNECT_STATUS_CONNECTED)

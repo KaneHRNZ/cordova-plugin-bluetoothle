@@ -10,19 +10,19 @@
 LAYOUT
 GRID
 {
-[bs                                                  ]
-Process state:         [stat                         ]
-TI Sensor Tag address: [addr                         ]
-Timestamp:             [tmst                         ]
-Current temp:          [temp                         ]
-[bq                                                  ]
+[bs                                 ]
+State:    [stat                     ]
+Address:  [addr                     ]
+Time:     [tmst                     ]
+Temp:     [temp                     ]
+[bq                                 ]
 }
 END
 ATTRIBUTES
-BUTTON bs: start, TEXT="Find device";
-BUTTON bq: quit, TEXT="End test";
-EDIT stat=FORMONLY.state, SCROLL;
-EDIT addr=FORMONLY.address, SCROLL;
-EDIT tmst=FORMONLY.timestamp;
-EDIT temp=FORMONLY.temperature;
+BUTTON bs: start, TEXT="Find TI SensorTag";
+BUTTON bq: cancel, TEXT="End test";
+EDIT stat=FORMONLY.state, SCROLL, NOENTRY, PLACEHOLDER="";
+EDIT addr=FORMONLY.address, SCROLL, NOENTRY, PLACEHOLDER="";
+EDIT tmst=FORMONLY.timestamp, NOENTRY, PLACEHOLDER="";
+EDIT temp=FORMONLY.temperature, PLACEHOLDER="";
 END

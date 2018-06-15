@@ -277,7 +277,8 @@ MAIN
        CALL setup_dialog(DIALOG)
 
     ON ACTION sensortag ATTRIBUTES(TEXT="TI Sensor Tag")
-       CALL show_temp()
+       LET inforec.address = show_temp()
+       CALL setup_dialog(DIALOG)
 
     END INPUT
 
@@ -740,24 +741,33 @@ PRIVATE FUNCTION show_temp()
 
   OPEN WINDOW wtis WITH FORM "sensortag"
 
-  LET rec.state = "begin"
-  INPUT BY NAME rec.* WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE,CANCEL=FALSE)
+  LET rec.state = "ready"
 
-       ON ACTION quit EXIT INPUT
+  INPUT BY NAME rec.* WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE)
 
        ON ACTION start
-LABEL _continue_:
---display sfmt("continuing: state = %1", rec.state)
+          GOTO _process_callbacks_ -- For remaining events, if test is restarted...
+LABEL _next_step_:
+display sfmt("continuing: state = %1", rec.state)
           CASE rec.state
-          WHEN "begin"
+          WHEN "ready"
              LET fglcdvBluetoothLE.initOptions.request=TRUE
              LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
              LET rec.state = "init-start"
-             IF fglcdvBluetoothLE.initialize(fglcdvBluetoothLE.INIT_MODE_CENTRAL, fglcdvBluetoothLE.initOptions.*) < 0 THEN
-                ERROR "Initialization failed."
-                EXIT INPUT
+             IF fglcdvBluetoothLE.getInitializationStatus()==INIT_STATUS_INITIALIZED THEN -- from previous test
+                LET rec.state = "init-done"
+                GOTO _next_step_
+             ELSE
+                IF fglcdvBluetoothLE.initialize(fglcdvBluetoothLE.INIT_MODE_CENTRAL, fglcdvBluetoothLE.initOptions.*) < 0 THEN
+                   ERROR "Initialization failed."
+                   EXIT INPUT
+                END IF
              END IF
+             GOTO _check_state_ -- In dev mode, initialization may return immediately without callback event
           WHEN "init-done"
+             IF fglcdvBluetoothLE.canStopScan() THEN -- from previous test
+                LET s = fglcdvBluetoothLE.stopScan()
+             END IF
              INITIALIZE fglcdvBluetoothLE.scanOptions.* TO NULL
              IF fen == "GMA" THEN
                 LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.SCAN_MODE_LOW_POWER
@@ -772,9 +782,12 @@ LABEL _continue_:
                 ERROR "Scan start failed."
                 EXIT INPUT
              END IF
+             GOTO _check_state_ -- In dev mode, startScan may return immediately without callback event
           WHEN "scan-results"
              LET rec.address = find_ti_sensor()
-             IF rec.address IS NULL THEN CONTINUE INPUT END IF
+             IF rec.address IS NULL THEN
+                CONTINUE INPUT
+             END IF
              LET rec.state = "scan-stop"
              IF fglcdvBluetoothLE.stopScan() < 0 THEN -- sync call
                 ERROR "Scan stop failed."
@@ -791,6 +804,7 @@ LABEL _continue_:
                 ERROR "Discovery failed."
                 EXIT INPUT
              END IF
+             LET rec.state = "discover-done"
              -- Enable temperature sensor
              LET rec.state = "config-start"
              IF fglcdvBluetoothLE.write(rec.address,SERVICE_TEMP,CHARACT_TEMP_CFG,"AQ==") < 0 THEN -- sync call
@@ -816,54 +830,63 @@ LABEL _continue_:
 
        ON ACTION cordovacallback
 display sfmt("cordovacallback: state = %1", rec.state)
+LABEL _process_callbacks_:
           LET cnt = fglcdvBluetoothLE.processCallbackEvents()
           IF cnt < 0 THEN
 display sfmt("  process error: %1", cnt)
              ERROR SFMT("Processing callback events failed: %1", cnt)
              EXIT INPUT
           END IF
-          CASE rec.state
-          WHEN "init-start"
+LABEL _check_state_:
+display sfmt("check state: %1", rec.state)
+          CASE
+          WHEN rec.state == "ready"
+            GOTO _next_step_
+          WHEN rec.state == "init-start"
             CASE fglcdvBluetoothLE.getInitializationStatus()
+            WHEN INIT_STATUS_READY        LET rec.state = "init-start"
             WHEN INIT_STATUS_INITIALIZING LET rec.state = "init-start"
-            WHEN INIT_STATUS_ENABLED      LET rec.state = "init-done"
+            WHEN INIT_STATUS_INITIALIZED  LET rec.state = "init-done"
             OTHERWISE ERROR "Initialization process failed." EXIT INPUT
             END CASE
-          WHEN "scan-start"
+          WHEN rec.state == "scan-start" OR rec.state == "scan-results"
             CASE fglcdvBluetoothLE.getScanStatus()
             WHEN SCAN_STATUS_STARTING  LET rec.state = "scan-start"
             WHEN SCAN_STATUS_STARTED   LET rec.state = "scan-start"
             WHEN SCAN_STATUS_RESULTS   LET rec.state = "scan-results"
             OTHERWISE ERROR "Scan process failed." EXIT INPUT
             END CASE
-          WHEN "connect-start"
+          WHEN rec.state == "connect-start"
+display "   connect-start case:   connect status = ", fglcdvBluetoothLE.connectStatusToString( fglcdvBluetoothLE.getConnectStatus(rec.address) )
             CASE fglcdvBluetoothLE.getConnectStatus(rec.address)
-            WHEN CONNECT_STATUS_CONNECTING  LET rec.state = "connect-start"
-            WHEN CONNECT_STATUS_CONNECTED   LET rec.state = "connect-done"
+            WHEN CONNECT_STATUS_DISCONNECTED LET rec.state = "connect-start"
+            WHEN CONNECT_STATUS_CONNECTING   LET rec.state = "connect-start"
+            WHEN CONNECT_STATUS_CONNECTED    LET rec.state = "connect-done"
             OTHERWISE ERROR "Connect process failed." EXIT INPUT
             END CASE
-          WHEN "subscribe-start"
+          WHEN rec.state = "subscribe-start" OR rec.state == "subscribe-results"
             CASE fglcdvBluetoothLE.getSubscriptionStatus(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
             WHEN SUBSCRIBE_STATUS_SUBSCRIBING  LET rec.state = "subscribe-start" 
             WHEN SUBSCRIBE_STATUS_SUBSCRIBED   LET rec.state = "subscribe-start" 
             WHEN SUBSCRIBE_STATUS_RESULTS      LET rec.state = "subscribe-results" 
             OTHERWISE ERROR "Subscribe process failed." EXIT INPUT
             END CASE
-          WHEN "subscribe-results"
-            CASE fglcdvBluetoothLE.getSubscriptionStatus(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
-            WHEN SUBSCRIBE_STATUS_RESULTS      LET rec.state = "subscribe-results" 
-            OTHERWISE ERROR "Subscribe process failed." EXIT INPUT
-            END CASE
           OTHERWISE ERROR SFMT("Unexpected state: %1",rec.state) EXIT INPUT
           END CASE
-          GOTO _continue_
+          GOTO _next_step_
 
   END INPUT
 
   CLOSE WINDOW wtis
 
-  LET s = fglcdvBluetoothLE.unsubscribe(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
-  LET s = fglcdvBluetoothLE.close(rec.address)
+  LET s = fglcdvBluetoothLE.stopScan()
+  IF rec.address IS NOT NULL THEN
+     LET s = fglcdvBluetoothLE.unsubscribe(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
+     LET s = fglcdvBluetoothLE.close(rec.address)
+  END IF
+display " END : connect status = ", fglcdvBluetoothLE.connectStatusToString( fglcdvBluetoothLE.getConnectStatus(rec.address) )
+
+  RETURN rec.address
 
 END FUNCTION
 
@@ -873,7 +896,7 @@ PRIVATE FUNCTION find_ti_sensor()
   CALL fglcdvBluetoothLE.getNewScanResults( resarr )
   LET x = resarr.search("name", IIF(fen=="GMA","SensorTag","TI BLE Sensor Tag"))
   IF x > 0 THEN
-display "    FOUND!!! addres = ", resarr[x].address
+display "found :", resarr[x].name
      RETURN resarr[x].address
   END IF
   RETURN NULL
