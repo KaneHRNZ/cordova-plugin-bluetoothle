@@ -792,7 +792,7 @@ display sfmt("continuing: state = %1", rec.state)
              END IF
              GOTO _check_state_ -- In dev mode, startScan may return immediately without callback event
           WHEN "scan-results"
-             LET rec.address = find_ti_sensor()
+             LET rec.address = find_sensor()
              IF rec.address IS NULL THEN
                 CONTINUE INPUT
              END IF
@@ -831,9 +831,8 @@ display sfmt("continuing: state = %1", rec.state)
              LET x = resarr.getLength()
              IF x>0 THEN
                 LET rec.timestamp = EXTEND(resarr[x].timestamp, HOUR TO FRACTION(3))
-display "value = ", resarr[x].value
-                LET rec.tempfar = _AA01_to_temp(resarr[x].value)
-                LET rec.tempcel = (rec.tempfar - 32) / 1.8
+                LET rec.tempcel = _AA01_to_temp(resarr[x].value)
+                LET rec.tempfar = ( 32 + (rec.tempcel * 1.8) )
              END IF
              CALL fglcdvBluetoothLE.clearSubscriptionResultBuffer()
           END CASE
@@ -898,15 +897,19 @@ display sfmt("check state: %1", rec.state)
 
 END FUNCTION
 
-PRIVATE FUNCTION find_ti_sensor()
+-- Support multiple sensor device names
+PRIVATE FUNCTION find_sensor()
   DEFINE resarr fglcdvBluetoothLE.ScanResultArrayT
-  DEFINE x INTEGER
+  DEFINE x, l INTEGER
   CALL fglcdvBluetoothLE.getNewScanResults( resarr )
-  LET x = resarr.search("name", IIF(fen=="GMA","SensorTag","TI BLE Sensor Tag"))
-  IF x > 0 THEN
-display "found :", resarr[x].name
-     RETURN resarr[x].address
-  END IF
+  LET l = resarr.getLength()
+  FOR x = 1 TO l
+    IF resarr[x].name.getIndexOf("SensorTag",1) > 0
+    OR resarr[x].name.getIndexOf("Sensor Tag",1) > 0
+    THEN
+       RETURN resarr[x].address
+    END IF
+  END FOR
   RETURN NULL
 END FUNCTION
 
@@ -914,18 +917,25 @@ END FUNCTION
 
 PRIVATE FUNCTION _AA01_to_temp(src STRING) RETURNS DECIMAL
   DEFINE hexa VARCHAR(10)
+  DEFINE b1, b2 CHAR(2)
+  DEFINE i, it INTEGER
+  DEFINE t DECIMAL
   TRY
     LET hexa = security.Base64.ToHexBinary(src)
-display "hexa = ", hexa
     IF LENGTH(hexa)!=8 THEN
        DISPLAY "ERROR: Hexa value must be 4 bytes long"
        RETURN NULL
     END IF
+    LET b1 = hexa[5,6]
+    LET b2 = hexa[7,8]
+    LET i = util.Integer.parseHexString(b2||b1)
+    LET it = util.Integer.shiftRight(i,2)
+    LET t = it * 0.03125
   CATCH
     DISPLAY "ERROR: Could not convert Base64 to Hexa"
     RETURN NULL
   END TRY
-  RETURN 0.0
+  RETURN t
 END FUNCTION
 
 &else
