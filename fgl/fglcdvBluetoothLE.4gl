@@ -293,10 +293,10 @@ PRIVATE FUNCTION _cleanup()
     IF canStopScan() THEN
        LET s = stopScan()
     END IF
-    CALL _disconnectAll()
+    CALL _closeAll()
 END FUNCTION
 
-PRIVATE FUNCTION _disconnectAll()
+PRIVATE FUNCTION _closeAll()
     DEFINE addrs DYNAMIC ARRAY OF STRING
     DEFINE x, s INTEGER
     LET addrs = connStatus.getKeys()
@@ -1079,6 +1079,13 @@ PRIVATE FUNCTION _close(address STRING, errors BOOLEAN) RETURNS SMALLINT
     LET params.address = address
     TRY
         LET lastConnAddr = address
+        IF _getFrontEndName() == "GMI" THEN -- Since iOS 10, must disconnect before close!
+            TRY
+                CALL ui.Interface.frontCall("cordova", "call",
+                        [BLUETOOTHLEPLUGIN,"disconnect",params],
+                        [result])
+            END TRY
+        END IF
         CALL ui.Interface.frontCall("cordova", "call",
                 [BLUETOOTHLEPLUGIN,"close",params],
                 [result])
