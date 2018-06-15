@@ -892,6 +892,7 @@ PRIVATE FUNCTION _stopScan(errors BOOLEAN) RETURNS INTEGER
         END IF
     CATCH
         IF errors THEN
+           LET scanStatus = SCAN_STATUS_FAILED
            CALL _debug_error()
            RETURN -99
         END IF
