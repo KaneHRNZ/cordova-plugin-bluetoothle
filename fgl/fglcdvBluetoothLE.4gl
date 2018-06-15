@@ -465,7 +465,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
 
     IF callbackId IS NULL THEN RETURN 0 END IF
 
---display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
+display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
     CALL _getAllCallbackData(callbackId) RETURNING s, jsonArray, lastErrorInfo
     IF s<0 THEN
         -- Cannot rely on lastErrorInfo: Sometimes we get {"message":"Unknown error."}
