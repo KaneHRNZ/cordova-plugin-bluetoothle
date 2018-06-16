@@ -73,8 +73,8 @@
       <DynamicProperty name="icon60x60" value="$(ProjectDir)/gmi/icon_60x60.png"/>
       <DynamicProperty name="icon76x76" value="$(ProjectDir)/gmi/icon_76x76.png"/>
       <DynamicProperty name="icon80x80" value="$(ProjectDir)/gmi/icon_40x40@2.png"/>
-      <DynamicProperty name="packageId" value="com.company.ble"/>
-      <DynamicProperty name="packageLabel" value="BlueT"/>
+      <DynamicProperty name="packageId" value="com.company.sensortag"/>
+      <DynamicProperty name="packageLabel" value="SensorTag"/>
       <Directory description="Binaries" destinationDirectory="$(ProjectDir)/bin" excludedFiles="Test.42r" includedFiles="*.42?" label="Binaries" recursive="false" sourceDirectory="$(ProjectDir)/bin"/>
       <Directory description="Images" destinationDirectory="$(ProjectDir)/bin" includedFiles="*.png,*.jpg,*.ttf,image2font.txt" label="Images" sourceDirectory="$(ProjectDir)/images"/>
       <Directory description="Studio Library" destinationDirectory="$(ProjectDir)/bin" includedFiles="*.42?" label="libgst" recursive="false" sourceDirectory="$(GSTLIBRARYDIR)/bin"/>
@@ -83,11 +83,7 @@
   <Group label="Project" language="Genero">
     <Application binaryName="Application" dependencies="159917928,212784684,362164715,455109296" environment="dirlist:FGLIMAGEPATH=$(ProjectDir)/images;$(FGLDIR)/lib/image2font.txt;$(ProjectDir)/webcomponents;$(FGLIMAGEPATH)" id="400358049" label="Application">
       <File filePath="main.4gl"/>
-      <File filePath="main.per"/>
-      <File filePath="bgevents.per"/>
-      <File filePath="scanres.per"/>
-      <File filePath="subsres.per"/>
-      <File filePath="textinfo.per"/>
+      <File filePath="sensortag.per"/>
     </Application>
   </Group>
 </Project>

@@ -239,6 +239,7 @@ PRIVATE DEFINE scanResultsOffset INTEGER
 PRIVATE DEFINE discResultDict DiscoverDictionaryT
 
 PRIVATE DEFINE subsResultArray SubscribeResultArrayT
+PRIVATE DEFINE subsResultsOffset INTEGER
 
 
 #+ Initializes the plugin library
@@ -636,6 +637,7 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
     CALL _check_lib_state(0)
     CALL clearCallbackBuffer()
     CALL clearScanResultBuffer()
+    CALL clearSubscriptionResultBuffer()
     IF callbackIdInitialize IS NOT NULL THEN
         RETURN -2
     END IF
@@ -879,6 +881,7 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
     IF NOT canStartScan() THEN
         RETURN -1
     END IF
+    CALL clearScanResultBuffer()
     -- In dev mode (GMI), Cordova plugin remains loaded, must stop scan if still scanning
     -- from a previous session...
     IF NOT base.Application.isMobile() THEN
@@ -1539,6 +1542,7 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
     IF NOT canSubscribe(address, service, characteristic) THEN
         RETURN -2
     END IF
+    CALL clearSubscriptionResultBuffer()
     LET params.address = address
     LET params.service = service
     LET params.characteristic = characteristic
@@ -1671,10 +1675,24 @@ PUBLIC FUNCTION getSubscriptionResults( sra SubscribeResultArrayT )
     CALL subsResultArray.copyTo( sra )
 END FUNCTION
 
+#+ Provides new subscription results collected since the last call to this function.
+#+
+#+ @param sra the array to hold subscription results.
+PUBLIC FUNCTION getNewSubscriptionResults( sra SubscribeResultArrayT )
+    DEFINE i, x, len INTEGER
+    CALL sra.clear()
+    IF subsResultsOffset <= 0 THEN RETURN END IF
+    LET len = subsResultArray.getLength()
+    FOR i=subsResultsOffset TO len
+        LET sra[x:=x+1].* = subsResultArray[i].*
+    END FOR
+    LET subsResultsOffset = len + 1
+END FUNCTION
+
 #+ Cleanup subscription result buffer.
 PUBLIC FUNCTION clearSubscriptionResultBuffer()
     CALL subsResultArray.clear()
-    --LET subsResultsOffset = 1
+    LET subsResultsOffset = 1
 END FUNCTION
 
 #+ Indicates if the BLE device has a specific service characteristic.

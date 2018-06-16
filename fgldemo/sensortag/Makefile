@@ -13,8 +13,8 @@
 # (simulator : no bluetooth available)
 # use "make gmi.install" to install on the device
 
-BUNDLE_IDENTIFIER   = com.4js.cdvble
-APPNAME             = CDVBlue
+BUNDLE_IDENTIFIER   = com.4js.sensortag
+APPNAME             = SensorTag
 DEVICE              = phone
 MODE                = debug
 BUILD_FGL           = no
@@ -41,7 +41,7 @@ FORMS    = $(patsubst %.per, %.42f, $(wildcard *.per))
 all:: $(MODULES) $(FORMS)
 
 
-main.42m: main.42f bgevents.42f scanres.42f subsres.42f textinfo.42f
+main.42m: sensortag.42f
 
 run: main.42m
 	FGLLDPATH=$(FGLLDPATH) fglrun main
