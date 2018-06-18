@@ -379,7 +379,7 @@ PRIVATE FUNCTION _getAllCallbackData(filter STRING)
 --display "getAllCallbackData        : ", _ts_diff()
     CATCH
         LET errinfo = _extract_error_info()
-display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
+--display "  getAllCallbackData error: ", IIF(errinfo IS NOT NULL, errinfo.toString(), "???")
         RETURN -1, NULL, errinfo
     END TRY
 --display "  getAllCallbackData result: ", result
@@ -407,7 +407,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
     DEFINE cnt, tot, x INTEGER
     DEFINE sks DYNAMIC ARRAY OF STRING
 
-display "processCallbackEvents:"
+--display "processCallbackEvents:"
 
     LET tot = 0
 
@@ -466,7 +466,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
 
     IF callbackId IS NULL THEN RETURN 0 END IF
 
-display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
+--display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackId
     CALL _getAllCallbackData(callbackId) RETURNING s, jsonArray, lastErrorInfo
     IF s<0 THEN
         -- Cannot rely on lastErrorInfo: Sometimes we get {"message":"Unknown error."}
@@ -508,7 +508,7 @@ display "  getAllCallbackData for ", what, column 40, " callbackId = ",callbackI
         LET bgEvents[idx].timestamp  = CURRENT
         LET bgEvents[idx].callbackId = callbackId
         LET bgEvents[idx].result     = jsonResult.toString()
-display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
+--display sfmt("  process result for %1: %2", what, bgEvents[idx].result)
         CASE what
         WHEN "initialize"
             CASE jsonResult.get("status")

@@ -55,9 +55,8 @@ PRIVATE FUNCTION main_form()
   INPUT BY NAME rec.* WITHOUT DEFAULTS ATTRIBUTES(UNBUFFERED,ACCEPT=FALSE)
 
        ON ACTION start
---FIXME?          GOTO _process_callbacks_ -- For remaining events, if test is restarted...
 LABEL _next_step_:
-display sfmt("continuing: state = %1", rec.state)
+--display sfmt("continuing: state = %1", rec.state)
           CASE rec.state
           WHEN "ready"
              LET ts = NULL
@@ -152,16 +151,16 @@ display sfmt("continuing: state = %1", rec.state)
           END IF
 
        ON ACTION cordovacallback ATTRIBUTES(DEFAULTVIEW=NO)
-display sfmt("cordovacallback: state = %1", rec.state)
+--display sfmt("cordovacallback: state = %1", rec.state)
 LABEL _process_callbacks_:
           LET cnt = fglcdvBluetoothLE.processCallbackEvents()
           IF cnt < 0 THEN
-display sfmt("  process error: %1", cnt)
+--display sfmt("  process error: %1", cnt)
              ERROR SFMT("Processing callback events failed: %1", cnt)
              EXIT INPUT
           END IF
 LABEL _check_state_:
-display sfmt("check state: %1", rec.state)
+--display sfmt("check state: %1", rec.state)
           CASE
           WHEN rec.state == "ready"
             GOTO _next_step_
