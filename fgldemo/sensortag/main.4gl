@@ -29,6 +29,7 @@ DEFINE fen STRING
 
 DEFINE rec RECORD
              state STRING,
+             device STRING,
              address STRING,
              timestamp STRING,
              tempfar STRING,
@@ -93,7 +94,7 @@ LABEL _next_step_:
              END IF
              GOTO _check_state_ -- In dev mode, startScan may return immediately without callback event
           WHEN "scan-results"
-             LET rec.address = find_sensor()
+             CALL find_sensor() RETURNING rec.device, rec.address
              IF rec.address IS NULL THEN
                 CONTINUE INPUT
              END IF
@@ -139,12 +140,13 @@ LABEL _next_step_:
           END CASE
 
        ON IDLE 3
-          IF rec.state == "scan-start" THEN
+          IF rec.state == "scan-start" OR rec.state == "scan-results" THEN
              IF ts IS NULL THEN
                 LET ts = CURRENT HOUR TO FRACTION(3)
              ELSE
-                IF (CURRENT HOUR TO FRACTION(3) - ts) > INTERVAL(00:00:10.000) HOUR TO FRACTION(3) THEN
-                   ERROR " Could not find sensor tag... \n Make sure it is advertizing! "
+                IF rec.address IS NULL
+                AND (CURRENT HOUR TO FRACTION(3) - ts) > INTERVAL(00:00:10.000) HOUR TO FRACTION(3) THEN
+                   CALL mbox_ok("Sensor Tag","Could not find sensor tag... \nMake sure it is advertizing!")
                    LET ts = CURRENT HOUR TO FRACTION(3)
                 END IF
              END IF
@@ -187,9 +189,9 @@ LABEL _check_state_:
             END CASE
           WHEN rec.state = "subscribe-start" OR rec.state == "subscribe-results"
             CASE fglcdvBluetoothLE.getSubscriptionStatus(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
-            WHEN SUBSCRIBE_STATUS_SUBSCRIBING  LET rec.state = "subscribe-start" 
-            WHEN SUBSCRIBE_STATUS_SUBSCRIBED   LET rec.state = "subscribe-start" 
-            WHEN SUBSCRIBE_STATUS_RESULTS      LET rec.state = "subscribe-results" 
+            WHEN SUBSCRIBE_STATUS_SUBSCRIBING  LET rec.state = "subscribe-start"
+            WHEN SUBSCRIBE_STATUS_SUBSCRIBED   LET rec.state = "subscribe-start"
+            WHEN SUBSCRIBE_STATUS_RESULTS      LET rec.state = "subscribe-results"
             OTHERWISE ERROR "Subscribe process failed." EXIT INPUT
             END CASE
           OTHERWISE ERROR SFMT("Unexpected state: %1",rec.state) EXIT INPUT
@@ -280,14 +282,14 @@ PRIVATE FUNCTION mbox_yn(tit STRING, msg STRING) RETURNS BOOLEAN
     RETURN r
 END FUNCTION
 
-PRIVATE FUNCTION getFrontEndName()
+PRIVATE FUNCTION getFrontEndName() RETURNS STRING
   DEFINE clientName STRING
   CALL ui.Interface.Frontcall("standard", "feinfo", ["fename"], [clientName])
   RETURN clientName
 END FUNCTION
 
 -- Support multiple sensor device names
-PRIVATE FUNCTION find_sensor()
+PRIVATE FUNCTION find_sensor() RETURNS (STRING, STRING)
   DEFINE resarr fglcdvBluetoothLE.ScanResultArrayT
   DEFINE x, l INTEGER
   CALL fglcdvBluetoothLE.getNewScanResults( resarr )
@@ -296,10 +298,10 @@ PRIVATE FUNCTION find_sensor()
     IF resarr[x].name.getIndexOf("SensorTag",1) > 0
     OR resarr[x].name.getIndexOf("Sensor Tag",1) > 0
     THEN
-       RETURN resarr[x].address
+       RETURN resarr[x].name, resarr[x].address
     END IF
   END FOR
-  RETURN NULL
+  RETURN NULL, NULL
 END FUNCTION
 
 &ifdef HAS_GWS

@@ -12,6 +12,7 @@ GRID
 {
 [bs                           ]
 [lstat        |stat           ]
+[ldevi        |devi           ]
 [laddr        |addr           ]
 [ltmst        |tmst           ]
 [ltmpf        |tmpf           ]
@@ -23,13 +24,15 @@ ATTRIBUTES
 BUTTON bs: start, TEXT="Start test";
 BUTTON bq: cancel, TEXT="End test";
 LABEL lstat:TEXT="State";
-LABEL laddr:TEXT="Device";
+LABEL ldevi:TEXT="Device";
+LABEL laddr:TEXT="Address";
 LABEL ltmst:TEXT="Timestamp";
 LABEL ltmpf:TEXT="Temp (Far.)";
 LABEL ltmpc:TEXT="Temp (Cel.)";
-EDIT stat=FORMONLY.state, SCROLL, NOENTRY, PLACEHOLDER="";
-EDIT addr=FORMONLY.address, SCROLL, PLACEHOLDER="";
-EDIT tmst=FORMONLY.timestamp,SCROLL, NOENTRY, PLACEHOLDER="";
+BUTTONEDIT stat=FORMONLY.state, SCROLL, PLACEHOLDER="", NOTEDITABLE;
+EDIT devi=FORMONLY.device, SCROLL, NOENTRY, PLACEHOLDER="";
+EDIT addr=FORMONLY.address, SCROLL, NOENTRY, PLACEHOLDER="";
+EDIT tmst=FORMONLY.timestamp, SCROLL, NOENTRY, PLACEHOLDER="";
 EDIT tmpf=FORMONLY.tempfar, NOENTRY, PLACEHOLDER="";
 EDIT tmpc=FORMONLY.tempcel, NOENTRY, PLACEHOLDER="";
 END
