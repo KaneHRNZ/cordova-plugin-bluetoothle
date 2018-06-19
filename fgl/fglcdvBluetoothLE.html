@@ -164,16 +164,16 @@
 <b><a href="#INIT_MODE_PERIPHERAL">INIT_MODE_PERIPHERAL</a></b> INTEGER<br>
 </td></tr>
 <tr><td class="summary-text">
-<b><a href="#INIT_STATUS_DISABLED">INIT_STATUS_DISABLED</a></b> INTEGER<br>
-</td></tr>
-<tr><td class="summary-text">
-<b><a href="#INIT_STATUS_ENABLED">INIT_STATUS_ENABLED</a></b> INTEGER<br>
-</td></tr>
-<tr><td class="summary-text">
 <b><a href="#INIT_STATUS_FAILED">INIT_STATUS_FAILED</a></b> INTEGER<br>
 </td></tr>
 <tr><td class="summary-text">
+<b><a href="#INIT_STATUS_INITIALIZED">INIT_STATUS_INITIALIZED</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
 <b><a href="#INIT_STATUS_INITIALIZING">INIT_STATUS_INITIALIZING</a></b> INTEGER<br>
+</td></tr>
+<tr><td class="summary-text">
+<b><a href="#INIT_STATUS_READY">INIT_STATUS_READY</a></b> INTEGER<br>
 </td></tr>
 <tr><td class="summary-text">
 <b><a href="#MATCH_MODE_AGRESSIVE">MATCH_MODE_AGRESSIVE</a></b> INTEGER<br>
@@ -410,6 +410,11 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
+<b><a href="#getNewSubscriptionResults">getNewSubscriptionResults</a></b>(sra <a href="#SubscribeResultArrayT">SubscribeResultArrayT</a>)<br> Provides new subscription results collected since the last call to this function.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
 <b><a href="#getScanResults">getScanResults</a></b>(sra <a href="#ScanResultArrayT">ScanResultArrayT</a>)<br> Provides all scan results collected during the BLE scan.</td>
 </tr>
 <tr>
@@ -516,6 +521,11 @@
 <td class="summary-text"></td>
 <td class="summary-text">
 <b><a href="#unsubscribe">unsubscribe</a></b>(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT<br> Unsubscribes to a characteristic of the BLE device.</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#wasConnected">wasConnected</a></b>(address STRING) RETURNS BOOLEAN<br> Checks if the given BLE device was connected.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -920,26 +930,26 @@
 <dd><dl></dl></dd>
 </dl>
 <hr>
-<a id="INIT_STATUS_DISABLED"> </a><h3>INIT_STATUS_DISABLED</h3>
-<tt>CONSTANT <b>INIT_STATUS_DISABLED</b> INTEGER = 0</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
-</dl>
-<hr>
-<a id="INIT_STATUS_ENABLED"> </a><h3>INIT_STATUS_ENABLED</h3>
-<tt>CONSTANT <b>INIT_STATUS_ENABLED</b> INTEGER = 2</tt><dl>
-<dd></dd>
-<dd><dl></dl></dd>
-</dl>
-<hr>
 <a id="INIT_STATUS_FAILED"> </a><h3>INIT_STATUS_FAILED</h3>
 <tt>CONSTANT <b>INIT_STATUS_FAILED</b> INTEGER = 3</tt><dl>
 <dd></dd>
 <dd><dl></dl></dd>
 </dl>
 <hr>
+<a id="INIT_STATUS_INITIALIZED"> </a><h3>INIT_STATUS_INITIALIZED</h3>
+<tt>CONSTANT <b>INIT_STATUS_INITIALIZED</b> INTEGER = 2</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
 <a id="INIT_STATUS_INITIALIZING"> </a><h3>INIT_STATUS_INITIALIZING</h3>
 <tt>CONSTANT <b>INIT_STATUS_INITIALIZING</b> INTEGER = 1</tt><dl>
+<dd></dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="INIT_STATUS_READY"> </a><h3>INIT_STATUS_READY</h3>
+<tt>CONSTANT <b>INIT_STATUS_READY</b> INTEGER = 0</tt><dl>
 <dd></dd>
 <dd><dl></dl></dd>
 </dl>
@@ -1256,7 +1266,6 @@
 <dd>
 <p> Close the connection to a device.</p>
 <p> Check if close is possible with the canClose(address) function.</p>
-<p> The close is asynchronous and results need to be processed with the cordovacallback action and processCallbackEvents().</p>
 </dd>
 <dd><dl>
 <dt><b>Parameters:</b></dt>
@@ -1481,6 +1490,17 @@
 <dt><b>Parameters:</b></dt>
 <dd>
 <code>sra</code> - the array of scan results to fill.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="getNewSubscriptionResults"> </a><h3>getNewSubscriptionResults</h3>
+<tt>FUNCTION <b>getNewSubscriptionResults</b>(sra <a href="#SubscribeResultArrayT">SubscribeResultArrayT</a>)</tt><dl>
+<dd><p> Provides new subscription results collected since the last call to this function.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>sra</code> - the array to hold subscription results.<br>
 </dd>
 </dl></dd>
 </dl>
@@ -1838,6 +1858,20 @@
 </dd>
 <dt><b>Returns:</b></dt>
 <dd>&lt;0 in case of error, 0 if ok.<br>
+</dd>
+</dl></dd>
+</dl>
+<hr>
+<a id="wasConnected"> </a><h3>wasConnected</h3>
+<tt>FUNCTION <b>wasConnected</b>(address STRING) RETURNS BOOLEAN</tt><dl>
+<dd><p> Checks if the given BLE device was connected.</p></dd>
+<dd><dl>
+<dt><b>Parameters:</b></dt>
+<dd>
+<code>address</code> - is the device address to check.<br>
+</dd>
+<dt><b>Returns:</b></dt>
+<dd>TRUE when it was connected, otherwise FALSE.<br>
 </dd>
 </dl></dd>
 </dl>

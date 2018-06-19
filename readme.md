@@ -1,4 +1,4 @@
-# This fork is providing Genero BDL specific additions, UNDER CONSTRUCTION!
+# This fork is providing Genero BDL specific additions, see [here](fgl/README.md).
 
 # Cordova Bluetooth LE Plugin
 This plugin allows you to interact with Bluetooth LE devices on Android, iOS, and partially on Windows.
