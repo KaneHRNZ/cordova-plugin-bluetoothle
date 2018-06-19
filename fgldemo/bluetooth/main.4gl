@@ -282,14 +282,12 @@ MAIN
 
 END MAIN
 
--- Strings represented in Base64 can be returned with trailing A chars.
--- This is not valid Base64 encoding and needs to be cleaned before using
--- the BDL util.Strings.base64DecodeToString() method.
 PRIVATE FUNCTION _base64_to_string(mode CHAR(1), src STRING) RETURNS STRING
     DEFINE l, n SMALLINT
     DEFINE tmp, res STRING
     LET res = util.Strings.base64DecodeToString(src)
     IF LENGTH(res)>0 THEN RETURN res END IF
+{ Workaround for FGL-4894 (fixed in FGL 3.10.14)
     -- Try to remove the trailing A chars...
     LET l = src.getLength()
     IF l > 1 THEN
@@ -313,6 +311,7 @@ PRIVATE FUNCTION _base64_to_string(mode CHAR(1), src STRING) RETURNS STRING
           LET res = util.Strings.base64DecodeToString(tmp)
        END IF
     END IF
+}
     IF LENGTH(res)==0 THEN
        IF mode=="V" THEN
           LET res = SFMT("(Base64: %1)",src)
