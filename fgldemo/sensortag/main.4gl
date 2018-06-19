@@ -14,9 +14,6 @@
 -- Note that we have to use a dialog to implement the cordovacallback action.
 
 IMPORT util
-&ifdef HAS_GWS
-IMPORT security
-&endif
 
 IMPORT FGL fgldialog
 IMPORT FGL fglcdvBluetoothLE
@@ -200,7 +197,9 @@ LABEL _check_state_:
 
   END INPUT
 
-  LET s = fglcdvBluetoothLE.stopScan()
+  IF rec.state == "scan-start" OR rec.state == "scan-results" THEN
+     LET s = fglcdvBluetoothLE.stopScan()
+  END IF
   IF rec.address IS NOT NULL THEN
      LET s = fglcdvBluetoothLE.unsubscribe(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
      LET s = fglcdvBluetoothLE.close(rec.address)
@@ -304,15 +303,13 @@ PRIVATE FUNCTION find_sensor() RETURNS (STRING, STRING)
   RETURN NULL, NULL
 END FUNCTION
 
-&ifdef HAS_GWS
-
 PRIVATE FUNCTION _AA01_to_temp(src STRING) RETURNS DECIMAL
   DEFINE hexa VARCHAR(10)
   DEFINE b1, b2 CHAR(2)
   DEFINE i, it INTEGER
   DEFINE t DECIMAL
   TRY
-    LET hexa = security.Base64.ToHexBinary(src)
+    LET hexa = util.Strings.base64DecodeToHexString(src)
     IF LENGTH(hexa)!=8 THEN
        DISPLAY "ERROR: Hexa value must be 4 bytes long"
        RETURN NULL
@@ -328,11 +325,3 @@ PRIVATE FUNCTION _AA01_to_temp(src STRING) RETURNS DECIMAL
   END TRY
   RETURN t
 END FUNCTION
-
-&else
-
-PRIVATE FUNCTION _AA01_to_temp(src STRING) RETURNS STRING
-  RETURN src
-END FUNCTION
-
-&endif
