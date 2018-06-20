@@ -114,7 +114,8 @@ LABEL _next_step_:
              LET rec.state = "discover-done"
              -- Enable temperature sensor
              LET rec.state = "config-start"
-             IF fglcdvBluetoothLE.write(rec.address,SERVICE_TEMP,CHARACT_TEMP_CFG,"AQ==") < 0 THEN -- sync call
+             IF fglcdvBluetoothLE.write(rec.address,SERVICE_TEMP,CHARACT_TEMP_CFG,
+                                        util.Strings.base64EncodeFromHexString("01")) < 0 THEN -- sync call
                 ERROR "Could not write temp config characteristic."
                 EXIT INPUT
              END IF
