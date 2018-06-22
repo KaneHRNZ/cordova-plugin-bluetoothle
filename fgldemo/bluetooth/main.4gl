@@ -342,15 +342,15 @@ PRIVATE FUNCTION show_device_info(address STRING)
     DEFINE discres fglcdvBluetoothLE.DiscoverDictionaryT
     CALL fglcdvBluetoothLE.getDiscoveryResults(discres)
     LET info = SFMT("Device: %1 (%2)\n", discres[address].name, address),
-               SFMT("    System ID: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_SYSTEM_ID)),
-               SFMT("    Model num: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_MODEL_NUMBER_STRING)),
-               SFMT("    Serial num: %1\n",        my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_SERIAL_NUMBER_STRING)),
-               SFMT("    Firmware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_FIRMWARE_VERSION_STRING)),
-               SFMT("    Hardware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_HARDWARE_VERSION_STRING)),
-               SFMT("    Software version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_SOFTWARE_VERSION_STRING)),
-               SFMT("    Manufacturer: %1\n",      my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_MANUFACTURER_NAME_STRING)),
-               SFMT("    IEEE 11073 20601: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_IEEE_11073_20601_REGULATORY_CERTIFICATION_DATA_LIST)),
-               SFMT("    PnP ID: %1\n",            my_read(discres,address,SERVICE_DEVICE_INFORMATION,CARACTERISTIC_PNP_ID))
+               SFMT("    System ID: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_SYSTEM_ID)),
+               SFMT("    Model num: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_MODEL_NUMBER_STRING)),
+               SFMT("    Serial num: %1\n",        my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_SERIAL_NUMBER_STRING)),
+               SFMT("    Firmware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_FIRMWARE_VERSION_STRING)),
+               SFMT("    Hardware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_HARDWARE_VERSION_STRING)),
+               SFMT("    Software version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_SOFTWARE_VERSION_STRING)),
+               SFMT("    Manufacturer: %1\n",      my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_MANUFACTURER_NAME_STRING)),
+               SFMT("    IEEE 11073 20601: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_IEEE_11073_20601_RCDL)),
+               SFMT("    PnP ID: %1\n",            my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_PNP_ID))
 --display "device info: ", info
     CALL mbox_ok("Device info", info)
 END FUNCTION
