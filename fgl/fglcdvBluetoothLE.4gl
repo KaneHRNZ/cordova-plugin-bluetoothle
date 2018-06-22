@@ -1230,7 +1230,7 @@ END FUNCTION
 #+ @param address the address of a BLE device.
 #+
 #+ @return TRUE if close is possible, otherwise FALSE.
-PUBLIC FUNCTION canClose(address STRING)
+PUBLIC FUNCTION canClose(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
     IF initStatus!=INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF

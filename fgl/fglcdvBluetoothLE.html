@@ -270,7 +270,7 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#canClose">canClose</a></b>(address STRING)<br> Indicates if it is possible to close the connection from the specified device.</td>
+<b><a href="#canClose">canClose</a></b>(address STRING) RETURNS BOOLEAN<br> Indicates if it is possible to close the connection from the specified device.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -1132,7 +1132,7 @@
 </dl>
 <hr>
 <a id="canClose"> </a><h3>canClose</h3>
-<tt>FUNCTION <b>canClose</b>(address STRING)</tt><dl>
+<tt>FUNCTION <b>canClose</b>(address STRING) RETURNS BOOLEAN</tt><dl>
 <dd>
 <p> Indicates if it is possible to close the connection from the specified device.</p>
 <p> It is not possible to close a connection if subscriptions are active.</p>
