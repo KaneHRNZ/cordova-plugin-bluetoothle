@@ -61,11 +61,11 @@ LABEL _next_step_:
              LET fglcdvBluetoothLE.initOptions.request=TRUE
              LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
              LET rec.state = "init-start"
-             IF fglcdvBluetoothLE.getInitializationStatus()==INIT_STATUS_INITIALIZED THEN -- from previous test
+             IF fglcdvBluetoothLE.getInitializationStatus()==BLE_INIT_STATUS_INITIALIZED THEN -- from previous test
                 LET rec.state = "init-done"
                 GOTO _next_step_
              ELSE
-                IF fglcdvBluetoothLE.initialize(fglcdvBluetoothLE.INIT_MODE_CENTRAL, fglcdvBluetoothLE.initOptions.*) < 0 THEN
+                IF fglcdvBluetoothLE.initialize(fglcdvBluetoothLE.BLE_INIT_MODE_CENTRAL, fglcdvBluetoothLE.initOptions.*) < 0 THEN
                    ERROR "Initialization failed."
                    EXIT INPUT
                 END IF
@@ -77,10 +77,10 @@ LABEL _next_step_:
              END IF
              INITIALIZE fglcdvBluetoothLE.scanOptions.* TO NULL
              IF fen == "GMA" THEN
-                LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.SCAN_MODE_LOW_POWER
-                LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.MATCH_MODE_AGRESSIVE
-                LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.MATCH_NUM_ONE_ADVERTISEMENT
-                LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.CALLBACK_TYPE_ALL_MATCHES
+                LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.BLE_SCAN_MODE_LOW_POWER
+                LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.BLE_MATCH_MODE_AGRESSIVE
+                LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.BLE_MATCH_NUM_ONE_ADVERTISEMENT
+                LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.BLE_CALLBACK_TYPE_ALL_MATCHES
              ELSE
                 LET fglcdvBluetoothLE.scanOptions.allowDuplicates = FALSE
              END IF
@@ -166,30 +166,30 @@ LABEL _check_state_:
             GOTO _next_step_
           WHEN rec.state == "init-start"
             CASE fglcdvBluetoothLE.getInitializationStatus()
-            WHEN INIT_STATUS_READY        LET rec.state = "init-start"
-            WHEN INIT_STATUS_INITIALIZING LET rec.state = "init-start"
-            WHEN INIT_STATUS_INITIALIZED  LET rec.state = "init-done"
+            WHEN BLE_INIT_STATUS_READY        LET rec.state = "init-start"
+            WHEN BLE_INIT_STATUS_INITIALIZING LET rec.state = "init-start"
+            WHEN BLE_INIT_STATUS_INITIALIZED  LET rec.state = "init-done"
             OTHERWISE ERROR "Initialization process failed." EXIT INPUT
             END CASE
           WHEN rec.state == "scan-start" OR rec.state == "scan-results"
             CASE fglcdvBluetoothLE.getScanStatus()
-            WHEN SCAN_STATUS_STARTING  LET rec.state = "scan-start"
-            WHEN SCAN_STATUS_STARTED   LET rec.state = "scan-start"
-            WHEN SCAN_STATUS_RESULTS   LET rec.state = "scan-results"
+            WHEN BLE_SCAN_STATUS_STARTING  LET rec.state = "scan-start"
+            WHEN BLE_SCAN_STATUS_STARTED   LET rec.state = "scan-start"
+            WHEN BLE_SCAN_STATUS_RESULTS   LET rec.state = "scan-results"
             OTHERWISE ERROR "Scan process failed." EXIT INPUT
             END CASE
           WHEN rec.state == "connect-start"
             CASE fglcdvBluetoothLE.getConnectStatus(rec.address)
-            WHEN CONNECT_STATUS_DISCONNECTED LET rec.state = "connect-start"
-            WHEN CONNECT_STATUS_CONNECTING   LET rec.state = "connect-start"
-            WHEN CONNECT_STATUS_CONNECTED    LET rec.state = "connect-done"
+            WHEN BLE_CONNECT_STATUS_DISCONNECTED LET rec.state = "connect-start"
+            WHEN BLE_CONNECT_STATUS_CONNECTING   LET rec.state = "connect-start"
+            WHEN BLE_CONNECT_STATUS_CONNECTED    LET rec.state = "connect-done"
             OTHERWISE ERROR "Connect process failed." EXIT INPUT
             END CASE
           WHEN rec.state = "subscribe-start" OR rec.state == "subscribe-results"
             CASE fglcdvBluetoothLE.getSubscriptionStatus(rec.address,SERVICE_TEMP,CHARACT_TEMP_VAL)
-            WHEN SUBSCRIBE_STATUS_SUBSCRIBING  LET rec.state = "subscribe-start"
-            WHEN SUBSCRIBE_STATUS_SUBSCRIBED   LET rec.state = "subscribe-start"
-            WHEN SUBSCRIBE_STATUS_RESULTS      LET rec.state = "subscribe-results"
+            WHEN BLE_SUBSCRIBE_STATUS_SUBSCRIBING  LET rec.state = "subscribe-start"
+            WHEN BLE_SUBSCRIBE_STATUS_SUBSCRIBED   LET rec.state = "subscribe-start"
+            WHEN BLE_SUBSCRIBE_STATUS_RESULTS      LET rec.state = "subscribe-results"
             OTHERWISE ERROR "Subscribe process failed." EXIT INPUT
             END CASE
           OTHERWISE ERROR SFMT("Unexpected state: %1",rec.state) EXIT INPUT

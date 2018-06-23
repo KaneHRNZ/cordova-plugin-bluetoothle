@@ -45,71 +45,71 @@ PUBLIC TYPE InitOptionsT RECORD
 END RECORD
 PUBLIC DEFINE initOptions InitOptionsT
 
-PUBLIC CONSTANT INIT_MODE_CENTRAL    = 1
-PUBLIC CONSTANT INIT_MODE_PERIPHERAL = 2
+PUBLIC CONSTANT BLE_INIT_MODE_CENTRAL    = 1
+PUBLIC CONSTANT BLE_INIT_MODE_PERIPHERAL = 2
 
-PUBLIC CONSTANT INIT_STATUS_READY        = 0
-PUBLIC CONSTANT INIT_STATUS_INITIALIZING = 1
-PUBLIC CONSTANT INIT_STATUS_INITIALIZED  = 2
-PUBLIC CONSTANT INIT_STATUS_FAILED       = 3
+PUBLIC CONSTANT BLE_INIT_STATUS_READY        = 0
+PUBLIC CONSTANT BLE_INIT_STATUS_INITIALIZING = 1
+PUBLIC CONSTANT BLE_INIT_STATUS_INITIALIZED  = 2
+PUBLIC CONSTANT BLE_INIT_STATUS_FAILED       = 3
 
-PUBLIC CONSTANT SCAN_STATUS_NOT_READY = 0
-PUBLIC CONSTANT SCAN_STATUS_READY     = 1
-PUBLIC CONSTANT SCAN_STATUS_STARTING  = 2
-PUBLIC CONSTANT SCAN_STATUS_STARTED   = 3
-PUBLIC CONSTANT SCAN_STATUS_STOPPED   = 4
-PUBLIC CONSTANT SCAN_STATUS_FAILED    = 5
-PUBLIC CONSTANT SCAN_STATUS_RESULTS   = 6
+PUBLIC CONSTANT BLE_SCAN_STATUS_NOT_READY = 0
+PUBLIC CONSTANT BLE_SCAN_STATUS_READY     = 1
+PUBLIC CONSTANT BLE_SCAN_STATUS_STARTING  = 2
+PUBLIC CONSTANT BLE_SCAN_STATUS_STARTED   = 3
+PUBLIC CONSTANT BLE_SCAN_STATUS_STOPPED   = 4
+PUBLIC CONSTANT BLE_SCAN_STATUS_FAILED    = 5
+PUBLIC CONSTANT BLE_SCAN_STATUS_RESULTS   = 6
 
-PUBLIC CONSTANT CONNECT_STATUS_UNDEFINED    = 0
-PUBLIC CONSTANT CONNECT_STATUS_CONNECTING   = 1
-PUBLIC CONSTANT CONNECT_STATUS_CONNECTED    = 2
-PUBLIC CONSTANT CONNECT_STATUS_DISCONNECTED = 3
-PUBLIC CONSTANT CONNECT_STATUS_CLOSED       = 4
-PUBLIC CONSTANT CONNECT_STATUS_FAILED       = 5
+PUBLIC CONSTANT BLE_CONNECT_STATUS_UNDEFINED    = 0
+PUBLIC CONSTANT BLE_CONNECT_STATUS_CONNECTING   = 1
+PUBLIC CONSTANT BLE_CONNECT_STATUS_CONNECTED    = 2
+PUBLIC CONSTANT BLE_CONNECT_STATUS_DISCONNECTED = 3
+PUBLIC CONSTANT BLE_CONNECT_STATUS_CLOSED       = 4
+PUBLIC CONSTANT BLE_CONNECT_STATUS_FAILED       = 5
 
-PUBLIC CONSTANT SUBSCRIBE_STATUS_UNDEFINED    = 0
-PUBLIC CONSTANT SUBSCRIBE_STATUS_READY        = 1
-PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBING  = 2
-PUBLIC CONSTANT SUBSCRIBE_STATUS_SUBSCRIBED   = 3
-PUBLIC CONSTANT SUBSCRIBE_STATUS_UNSUBSCRIBED = 4
-PUBLIC CONSTANT SUBSCRIBE_STATUS_FAILED       = 5
-PUBLIC CONSTANT SUBSCRIBE_STATUS_RESULTS      = 6
+PUBLIC CONSTANT BLE_SUBSCRIBE_STATUS_UNDEFINED    = 0
+PUBLIC CONSTANT BLE_SUBSCRIBE_STATUS_READY        = 1
+PUBLIC CONSTANT BLE_SUBSCRIBE_STATUS_SUBSCRIBING  = 2
+PUBLIC CONSTANT BLE_SUBSCRIBE_STATUS_SUBSCRIBED   = 3
+PUBLIC CONSTANT BLE_SUBSCRIBE_STATUS_UNSUBSCRIBED = 4
+PUBLIC CONSTANT BLE_SUBSCRIBE_STATUS_FAILED       = 5
+PUBLIC CONSTANT BLE_SUBSCRIBE_STATUS_RESULTS      = 6
 
-PUBLIC CONSTANT DISCOVER_STATUS_UNDEFINED  = 0
-PUBLIC CONSTANT DISCOVER_STATUS_DISCOVERED = 1
-PUBLIC CONSTANT DISCOVER_STATUS_FAILED     = 2
+PUBLIC CONSTANT BLE_DISCOVER_STATUS_UNDEFINED  = 0
+PUBLIC CONSTANT BLE_DISCOVER_STATUS_DISCOVERED = 1
+PUBLIC CONSTANT BLE_DISCOVER_STATUS_FAILED     = 2
 
-PUBLIC CONSTANT SCAN_MODE_OPPORTUNISTIC = -1
-PUBLIC CONSTANT SCAN_MODE_LOW_POWER     = 0
-PUBLIC CONSTANT SCAN_MODE_BALANCED      = 1
-PUBLIC CONSTANT SCAN_MODE_LOW_LATENCY   = 2
+PUBLIC CONSTANT BLE_SCAN_MODE_OPPORTUNISTIC = -1
+PUBLIC CONSTANT BLE_SCAN_MODE_LOW_POWER     = 0
+PUBLIC CONSTANT BLE_SCAN_MODE_BALANCED      = 1
+PUBLIC CONSTANT BLE_SCAN_MODE_LOW_LATENCY   = 2
 
-PUBLIC CONSTANT MATCH_MODE_AGRESSIVE = 1
-PUBLIC CONSTANT MATCH_MODE_STICKY    = 2
+PUBLIC CONSTANT BLE_MATCH_MODE_AGRESSIVE = 1
+PUBLIC CONSTANT BLE_MATCH_MODE_STICKY    = 2
 
-PUBLIC CONSTANT MATCH_NUM_ONE_ADVERTISEMENT = 1
-PUBLIC CONSTANT MATCH_NUM_FEW_ADVERTISEMENT = 2
-PUBLIC CONSTANT MATCH_NUM_MAX_ADVERTISEMENT = 3
+PUBLIC CONSTANT BLE_MATCH_NUM_ONE_ADVERTISEMENT = 1
+PUBLIC CONSTANT BLE_MATCH_NUM_FEW_ADVERTISEMENT = 2
+PUBLIC CONSTANT BLE_MATCH_NUM_MAX_ADVERTISEMENT = 3
 
-PUBLIC CONSTANT CALLBACK_TYPE_ALL_MATCHES = 1
-PUBLIC CONSTANT CALLBACK_TYPE_FIRST_MATCH = 2
-PUBLIC CONSTANT CALLBACK_TYPE_MATCH_LOST  = 4
+PUBLIC CONSTANT BLE_CALLBACK_TYPE_ALL_MATCHES = 1
+PUBLIC CONSTANT BLE_CALLBACK_TYPE_FIRST_MATCH = 2
+PUBLIC CONSTANT BLE_CALLBACK_TYPE_MATCH_LOST  = 4
 
-PUBLIC CONSTANT SERVICE_GENERIC_ACCESS                              = "1800"
-PUBLIC CONSTANT SERVICE_DEVICE_INFORMATION                          = "180A"
+PUBLIC CONSTANT BLE_SERVICE_GENERIC_ACCESS                  = "1800"
+PUBLIC CONSTANT BLE_SERVICE_DEVICE_INFORMATION              = "180A"
 
-PUBLIC CONSTANT CHARACTERISTIC_DEVICE_NAME                  = "2A00"
-PUBLIC CONSTANT CHARACTERISTIC_MEASUREMENT_INTERVAL         = "2A21"
-PUBLIC CONSTANT CHARACTERISTIC_SYSTEM_ID                    = "2A23"
-PUBLIC CONSTANT CHARACTERISTIC_MODEL_NUMBER_STRING          = "2A24"
-PUBLIC CONSTANT CHARACTERISTIC_SERIAL_NUMBER_STRING         = "2A25"
-PUBLIC CONSTANT CHARACTERISTIC_FIRMWARE_VERSION_STRING      = "2A26"
-PUBLIC CONSTANT CHARACTERISTIC_HARDWARE_VERSION_STRING      = "2A27"
-PUBLIC CONSTANT CHARACTERISTIC_SOFTWARE_VERSION_STRING      = "2A28"
-PUBLIC CONSTANT CHARACTERISTIC_MANUFACTURER_NAME_STRING     = "2A29"
-PUBLIC CONSTANT CHARACTERISTIC_IEEE_11073_20601_RCDL        = "2A2A"
-PUBLIC CONSTANT CHARACTERISTIC_PNP_ID                       = "2A50"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_DEVICE_NAME              = "2A00"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_MEASUREMENT_INTERVAL     = "2A21"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_SYSTEM_ID                = "2A23"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_MODEL_NUMBER_STRING      = "2A24"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_SERIAL_NUMBER_STRING     = "2A25"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_FIRMWARE_VERSION_STRING  = "2A26"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_HARDWARE_VERSION_STRING  = "2A27"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_SOFTWARE_VERSION_STRING  = "2A28"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_MANUFACTURER_NAME_STRING = "2A29"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_IEEE_11073_20601_RCDL    = "2A2A"
+PUBLIC CONSTANT BLE_CHARACTERISTIC_PNP_ID                   = "2A50"
 
 PUBLIC TYPE ScanOptionsT RECORD
   services DYNAMIC ARRAY OF STRING,
@@ -261,13 +261,13 @@ PUBLIC FUNCTION init()
     -- iOS default scan options
     LET scanOptions.allowDuplicates = FALSE
     -- Android default scan options
-    LET scanOptions.scanMode = SCAN_MODE_LOW_POWER
-    LET scanOptions.matchMode = MATCH_MODE_AGRESSIVE
-    LET scanOptions.matchNum = MATCH_NUM_ONE_ADVERTISEMENT
-    LET scanOptions.callbackType = CALLBACK_TYPE_ALL_MATCHES
+    LET scanOptions.scanMode = BLE_SCAN_MODE_LOW_POWER
+    LET scanOptions.matchMode = BLE_MATCH_MODE_AGRESSIVE
+    LET scanOptions.matchNum = BLE_MATCH_NUM_ONE_ADVERTISEMENT
+    LET scanOptions.callbackType = BLE_CALLBACK_TYPE_ALL_MATCHES
 
-    LET initStatus = INIT_STATUS_READY -- BLE init status
-    LET scanStatus = SCAN_STATUS_NOT_READY
+    LET initStatus = BLE_INIT_STATUS_READY -- BLE init status
+    LET scanStatus = BLE_SCAN_STATUS_NOT_READY
 
     LET initialized = TRUE -- Lib init status
 
@@ -316,7 +316,7 @@ PRIVATE FUNCTION _check_lib_state(mode SMALLINT)
         CALL _fatalError("Library is not initialized.")
     END IF
     IF mode >= 1 THEN
-        IF initStatus == INIT_STATUS_INITIALIZED IS NULL THEN
+        IF initStatus == BLE_INIT_STATUS_INITIALIZED IS NULL THEN
             CALL _fatalError("BluetoothLE is not initialized.")
         END IF
     END IF
@@ -413,7 +413,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
 
     LET cnt = _fetchCallbackEvents("initialize", callbackIdInitialize)
     IF cnt<0 THEN
-        LET initStatus = INIT_STATUS_FAILED
+        LET initStatus = BLE_INIT_STATUS_FAILED
         RETURN cnt
     ELSE
         LET tot = tot + cnt
@@ -421,7 +421,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
 
     LET cnt = _fetchCallbackEvents("scan", callbackIdScan)
     IF cnt<0 THEN
-        LET scanStatus = SCAN_STATUS_FAILED
+        LET scanStatus = BLE_SCAN_STATUS_FAILED
         RETURN cnt
     ELSE
         LET tot = tot + cnt
@@ -431,7 +431,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
     IF cnt<0 THEN
         IF lastErrorInfo IS NOT NULL THEN
             IF lastErrorInfo.get("error")=="connect" THEN
-                LET connStatus[lastErrorInfo.get("address")] = CONNECT_STATUS_FAILED
+                LET connStatus[lastErrorInfo.get("address")] = BLE_CONNECT_STATUS_FAILED
             END IF
         END IF
         RETURN cnt
@@ -445,7 +445,7 @@ PUBLIC FUNCTION processCallbackEvents() RETURNS INTEGER
         IF cnt<0 THEN
             IF lastErrorInfo IS NOT NULL THEN
                 IF lastErrorInfo.get("error")=="subscribe" THEN
-                    LET subsStatus[sks[x]] = SUBSCRIBE_STATUS_FAILED
+                    LET subsStatus[sks[x]] = BLE_SUBSCRIBE_STATUS_FAILED
                 END IF
             END IF
             RETURN cnt
@@ -472,10 +472,10 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
         -- Cannot rely on lastErrorInfo: Sometimes we get {"message":"Unknown error."}
         CASE
         WHEN what=="initialize"
-            LET initStatus = INIT_STATUS_FAILED
-            LET scanStatus = SCAN_STATUS_NOT_READY
+            LET initStatus = BLE_INIT_STATUS_FAILED
+            LET scanStatus = BLE_SCAN_STATUS_NOT_READY
         WHEN what=="scan"
-            LET scanStatus = SCAN_STATUS_FAILED
+            LET scanStatus = BLE_SCAN_STATUS_FAILED
         WHEN what=="connect"
             IF lastErrorInfo IS NOT NULL THEN
                 IF lastErrorInfo.get("address") IS NOT NULL THEN
@@ -484,7 +484,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
             END IF
             IF addr IS NULL THEN LET addr = lastConnAddr END IF
             IF addr IS NULL THEN CALL _fatalError("connect error: address is unknown.") END IF
-            LET connStatus[lastConnAddr] = CONNECT_STATUS_FAILED
+            LET connStatus[lastConnAddr] = BLE_CONNECT_STATUS_FAILED
         WHEN what=="subscribe" OR what=="unsubscribe"
             IF lastErrorInfo IS NOT NULL THEN
                 LET addr = lastErrorInfo.get("address")
@@ -496,7 +496,7 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
             END IF
             IF sk IS NULL THEN LET sk = lastSubsSK END IF
             IF sk IS NULL THEN CALL _fatalError("subscribe error: sk is unknown.") END IF
-            LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
+            LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_FAILED
         END CASE
         RETURN -1
     END IF
@@ -513,32 +513,32 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
         WHEN "initialize"
             CASE jsonResult.get("status")
             WHEN "enabled"
-                LET initStatus = INIT_STATUS_INITIALIZED
-                LET scanStatus = SCAN_STATUS_READY
+                LET initStatus = BLE_INIT_STATUS_INITIALIZED
+                LET scanStatus = BLE_SCAN_STATUS_READY
             OTHERWISE
-                LET initStatus = INIT_STATUS_FAILED
-                LET scanStatus = SCAN_STATUS_NOT_READY
+                LET initStatus = BLE_INIT_STATUS_FAILED
+                LET scanStatus = BLE_SCAN_STATUS_NOT_READY
             END CASE
         WHEN "scan"
             CASE jsonResult.get("status")
             WHEN "scanStarted"
-                LET scanStatus = SCAN_STATUS_STARTED
+                LET scanStatus = BLE_SCAN_STATUS_STARTED
             WHEN "scanResult"
-                LET scanStatus = SCAN_STATUS_RESULTS
+                LET scanStatus = BLE_SCAN_STATUS_RESULTS
                 LET s = _saveScanResult(jsonResult)
             OTHERWISE
-                LET scanStatus = SCAN_STATUS_FAILED
+                LET scanStatus = BLE_SCAN_STATUS_FAILED
             END CASE
         WHEN "connect"
             LET addr = jsonResult.get("address")
             IF addr IS NULL THEN CALL _fatalError("connect result: address field is null.") END IF
             CASE jsonResult.get("status")
             WHEN "connected"
-                LET connStatus[addr] = CONNECT_STATUS_CONNECTED
+                LET connStatus[addr] = BLE_CONNECT_STATUS_CONNECTED
             WHEN "disconnected"
-                LET connStatus[addr] = CONNECT_STATUS_DISCONNECTED
+                LET connStatus[addr] = BLE_CONNECT_STATUS_DISCONNECTED
             OTHERWISE
-                LET connStatus[addr] = CONNECT_STATUS_FAILED
+                LET connStatus[addr] = BLE_CONNECT_STATUS_FAILED
             END CASE
         WHEN "subscribe"
             LET addr = jsonResult.get("address")
@@ -550,12 +550,12 @@ PRIVATE FUNCTION _fetchCallbackEvents(what STRING, callbackId STRING) RETURNS IN
             LET sk = _subsKey(addr,serv,chrc)
             CASE jsonResult.get("status")
             WHEN "subscribed"
-                LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBED
+                LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_SUBSCRIBED
             WHEN "subscribedResult"
-                LET subsStatus[sk] = SUBSCRIBE_STATUS_RESULTS
+                LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_RESULTS
                 LET s = _saveSubsResult(jsonResult)
             OTHERWISE
-                LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
+                LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_FAILED
             END CASE
         END CASE
     END FOR
@@ -623,13 +623,13 @@ END FUNCTION
 #+ @return TRUE when initialization is possible, FALSE otherwise.
 PUBLIC FUNCTION canInitialize() RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    RETURN (initStatus == INIT_STATUS_READY
-         OR initStatus == INIT_STATUS_FAILED)
+    RETURN (initStatus == BLE_INIT_STATUS_READY
+         OR initStatus == BLE_INIT_STATUS_FAILED)
 END FUNCTION
 
 #+ Initializes BLE
 #+
-#+ @param initMode INIT_MODE_CENTRAL (INIT_MODE_PERIPHERAL not supported yet)
+#+ @param initMode BLE_INIT_MODE_CENTRAL (BLE_INIT_MODE_PERIPHERAL not supported yet)
 #+ @param initOptions the initialization options of (see InitOptionsT)
 #+
 #+ @return 0 on success, <0 if error.
@@ -641,26 +641,26 @@ PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS 
     IF callbackIdInitialize IS NOT NULL THEN
         RETURN -2
     END IF
-    IF initStatus != INIT_STATUS_READY THEN
+    IF initStatus != BLE_INIT_STATUS_READY THEN
         RETURN -3
     END IF
-    IF initMode!=INIT_MODE_CENTRAL THEN
+    IF initMode!=BLE_INIT_MODE_CENTRAL THEN
         CALL _fatalError("Only central mode is supported for now.")
     END IF
     -- In dev mode (GMI), Cordova plugin remains loaded...
     IF NOT base.Application.isMobile() THEN
        IF isInitialized() THEN
-          LET initStatus = INIT_STATUS_INITIALIZED
-          LET scanStatus = SCAN_STATUS_READY
+          LET initStatus = BLE_INIT_STATUS_INITIALIZED
+          LET scanStatus = BLE_SCAN_STATUS_READY
           RETURN 0
        END IF
     END IF
     TRY
-        LET initStatus = INIT_STATUS_INITIALIZING
-        LET scanStatus = SCAN_STATUS_NOT_READY
+        LET initStatus = BLE_INIT_STATUS_INITIALIZING
+        LET scanStatus = BLE_SCAN_STATUS_NOT_READY
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
             [BLUETOOTHLEPLUGIN,
-             IIF(initMode==INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
+             IIF(initMode==BLE_INIT_MODE_CENTRAL,"initialize","initializePeripheral"),
              initOptions],
             [callbackIdInitialize])
     CATCH
@@ -672,7 +672,7 @@ END FUNCTION
 
 #+ Provides the initialization status.
 #+
-#+ @return INIT_STATUS_* values.
+#+ @return BLE_INIT_STATUS_* values.
 PUBLIC FUNCTION getInitializationStatus() RETURNS SMALLINT
     RETURN initStatus
 END FUNCTION
@@ -684,10 +684,10 @@ END FUNCTION
 #+ @return the initialization status as text.
 PUBLIC FUNCTION initializationStatusToString(s SMALLINT) RETURNS STRING
     CASE s
-    WHEN INIT_STATUS_READY        RETURN "Ready"
-    WHEN INIT_STATUS_INITIALIZING RETURN "Initializing"
-    WHEN INIT_STATUS_INITIALIZED  RETURN "Initialized"
-    WHEN INIT_STATUS_FAILED       RETURN "Failed"
+    WHEN BLE_INIT_STATUS_READY        RETURN "Ready"
+    WHEN BLE_INIT_STATUS_INITIALIZING RETURN "Initializing"
+    WHEN BLE_INIT_STATUS_INITIALIZED  RETURN "Initialized"
+    WHEN BLE_INIT_STATUS_FAILED       RETURN "Failed"
     OTHERWISE RETURN NULL
     END CASE
 END FUNCTION
@@ -818,9 +818,9 @@ END FUNCTION
 #+ @return TRUE if scanning is possible, otherwise FALSE.
 PUBLIC FUNCTION canStartScan() RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    RETURN (scanStatus == SCAN_STATUS_READY
-         OR scanStatus == SCAN_STATUS_STOPPED
-         OR scanStatus == SCAN_STATUS_FAILED)
+    RETURN (scanStatus == BLE_SCAN_STATUS_READY
+         OR scanStatus == BLE_SCAN_STATUS_STOPPED
+         OR scanStatus == BLE_SCAN_STATUS_FAILED)
 END FUNCTION
 
 #+ Indicates if BLE device scanning can be stopped.
@@ -830,8 +830,8 @@ END FUNCTION
 #+ @return TRUE if stop scanning is possible, otherwise FALSE.
 PUBLIC FUNCTION canStopScan() RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    RETURN (scanStatus == SCAN_STATUS_STARTED
-         OR scanStatus == SCAN_STATUS_RESULTS)
+    RETURN (scanStatus == BLE_SCAN_STATUS_STARTED
+         OR scanStatus == BLE_SCAN_STATUS_RESULTS)
 END FUNCTION
 
 #+ Starts BLE scanning
@@ -850,17 +850,17 @@ END FUNCTION
 #+
 #+ Check the scanning status with the getScanStatus() function:
 #+
-#+ - SCAN_STATUS_STARTED: The scan is starting, waiting for results.
+#+ - BLE_SCAN_STATUS_STARTED: The scan is starting, waiting for results.
 #+
-#+ - SCAN_STATUS_RESULTS: Scan results are available with getScanResults().
+#+ - BLE_SCAN_STATUS_RESULTS: Scan results are available with getScanResults().
 #+
 #+ @code
 #+ INITIALIZE fglcdvBluetoothLE.scanOptions.* TO NULL
 #+ IF fen == "GMA" THEN
-#+    LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.SCAN_MODE_LOW_POWER
-#+    LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.MATCH_MODE_AGRESSIVE
-#+    LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.MATCH_NUM_ONE_ADVERTISEMENT
-#+    LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.CALLBACK_TYPE_ALL_MATCHES
+#+    LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.BLE_SCAN_MODE_LOW_POWER
+#+    LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.BLE_MATCH_MODE_AGRESSIVE
+#+    LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.BLE_MATCH_NUM_ONE_ADVERTISEMENT
+#+    LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.BLE_CALLBACK_TYPE_ALL_MATCHES
 #+ ELSE
 #+    LET fglcdvBluetoothLE.scanOptions.allowDuplicates = FALSE
 #+ END IF
@@ -902,7 +902,7 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
                 [BLUETOOTHLEPLUGIN,"startScan",scanOptions],
                 [callbackIdScan])
 --display "startScan callbackId = ", callbackIdScan
-        LET scanStatus = SCAN_STATUS_STARTING
+        LET scanStatus = BLE_SCAN_STATUS_STARTING
     CATCH
         CALL _debug_error()
         RETURN -99
@@ -918,17 +918,17 @@ PRIVATE FUNCTION _stopScan(errors BOOLEAN) RETURNS INTEGER
                 [BLUETOOTHLEPLUGIN,"stopScan"], [result] )
         LET jsonResult = util.JSONObject.parse(result)
         IF jsonResult.get("status")!="scanStopped" THEN
-           LET scanStatus = SCAN_STATUS_FAILED
+           LET scanStatus = BLE_SCAN_STATUS_FAILED
            RETURN -1
         END IF
     CATCH
         IF errors THEN
-           LET scanStatus = SCAN_STATUS_FAILED
+           LET scanStatus = BLE_SCAN_STATUS_FAILED
            CALL _debug_error()
            RETURN -99
         END IF
     END TRY
-    LET scanStatus = SCAN_STATUS_STOPPED
+    LET scanStatus = BLE_SCAN_STATUS_STOPPED
     RETURN 0
 END FUNCTION
 
@@ -938,7 +938,7 @@ END FUNCTION
 #+
 #+ This call is synchronous (result does not need to be handled with cordovacallback action)
 #+
-#+ @return SCAN_STATUS_STOPPED or SCAN_STATUS_FAILED.
+#+ @return BLE_SCAN_STATUS_STOPPED or BLE_SCAN_STATUS_FAILED.
 PUBLIC FUNCTION stopScan() RETURNS INTEGER
     CALL _check_lib_state(1)
     IF NOT canStopScan() THEN
@@ -949,7 +949,7 @@ END FUNCTION
 
 #+ Provides the current scan status.
 #+
-#+ @return SCAN_STATUS_* values.
+#+ @return BLE_SCAN_STATUS_* values.
 PUBLIC FUNCTION getScanStatus() RETURNS SMALLINT
     RETURN scanStatus
 END FUNCTION
@@ -961,13 +961,13 @@ END FUNCTION
 #+ @return the scan status as text.
 PUBLIC FUNCTION scanStatusToString(s SMALLINT) RETURNS STRING
     CASE s
-    WHEN SCAN_STATUS_NOT_READY RETURN "Not ready"
-    WHEN SCAN_STATUS_READY     RETURN "Ready"
-    WHEN SCAN_STATUS_STARTING  RETURN "Starting"
-    WHEN SCAN_STATUS_STARTED   RETURN "Started"
-    WHEN SCAN_STATUS_STOPPED   RETURN "Stopped"
-    WHEN SCAN_STATUS_FAILED    RETURN "Failed"
-    WHEN SCAN_STATUS_RESULTS   RETURN "Results"
+    WHEN BLE_SCAN_STATUS_NOT_READY RETURN "Not ready"
+    WHEN BLE_SCAN_STATUS_READY     RETURN "Ready"
+    WHEN BLE_SCAN_STATUS_STARTING  RETURN "Starting"
+    WHEN BLE_SCAN_STATUS_STARTED   RETURN "Started"
+    WHEN BLE_SCAN_STATUS_STOPPED   RETURN "Stopped"
+    WHEN BLE_SCAN_STATUS_FAILED    RETURN "Failed"
+    WHEN BLE_SCAN_STATUS_RESULTS   RETURN "Results"
     OTHERWISE RETURN NULL
     END CASE
 END FUNCTION
@@ -1023,17 +1023,17 @@ END FUNCTION
 #+
 #+ Check the connection status with the getConnectionStatus(address) function:
 #+
-#+ - CONNECT_STATUS_UNDEFINED : Not yet connected
+#+ - BLE_CONNECT_STATUS_UNDEFINED : Not yet connected
 #+
-#+ - CONNECT_STATUS_CONNECTING : Connection is in progress
+#+ - BLE_CONNECT_STATUS_CONNECTING : Connection is in progress
 #+
-#+ - CONNECT_STATUS_CONNECTED : Connected to the device
+#+ - BLE_CONNECT_STATUS_CONNECTED : Connected to the device
 #+
-#+ - CONNECT_STATUS_DISCONNECTED : Disconnected from the device
+#+ - BLE_CONNECT_STATUS_DISCONNECTED : Disconnected from the device
 #+
-#+ - CONNECT_STATUS_CLOSED : Connection was closed
+#+ - BLE_CONNECT_STATUS_CLOSED : Connection was closed
 #+
-#+ - CONNECT_STATUS_FAILED : Connection failed
+#+ - BLE_CONNECT_STATUS_FAILED : Connection failed
 #+
 #+ @param address the address of the BLE device to connect to, as returned in scan results.
 #+
@@ -1060,11 +1060,11 @@ PUBLIC FUNCTION connect(address STRING) RETURNS SMALLINT
     TRY
         LET lastConnAddr = address
         IF connStatus.contains(address) THEN
-            IF connStatus[address]==CONNECT_STATUS_DISCONNECTED THEN
+            IF connStatus[address]==BLE_CONNECT_STATUS_DISCONNECTED THEN
                 LET command = "reconnect"
             END IF
         END IF
-        LET connStatus[address] = CONNECT_STATUS_CONNECTING
+        LET connStatus[address] = BLE_CONNECT_STATUS_CONNECTING
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN, command, params],
                 [callbackIdConnect])
@@ -1117,16 +1117,16 @@ PRIVATE FUNCTION _close(address STRING, errors BOOLEAN) RETURNS SMALLINT
                 [result])
         LET jsonResult = util.JSONObject.parse(result)
         IF jsonResult.get("status") == "closed" THEN
-            LET connStatus[address] = CONNECT_STATUS_CLOSED
+            LET connStatus[address] = BLE_CONNECT_STATUS_CLOSED
         ELSE
-            LET connStatus[address] = CONNECT_STATUS_FAILED
+            LET connStatus[address] = BLE_CONNECT_STATUS_FAILED
         END IF
     CATCH
         IF errors THEN
             CALL _debug_error()
             RETURN -99
         ELSE
-            LET connStatus[address] = CONNECT_STATUS_CLOSED
+            LET connStatus[address] = BLE_CONNECT_STATUS_CLOSED
         END IF
     END TRY
     RETURN 0
@@ -1156,7 +1156,7 @@ PUBLIC FUNCTION getConnectStatus(address STRING) RETURNS SMALLINT
     IF connStatus.contains(address) THEN
         RETURN connStatus[address]
     ELSE
-        RETURN CONNECT_STATUS_UNDEFINED
+        RETURN BLE_CONNECT_STATUS_UNDEFINED
     END IF
 END FUNCTION
 
@@ -1167,12 +1167,12 @@ END FUNCTION
 #+ @return the connection status as text.
 PUBLIC FUNCTION connectStatusToString(s SMALLINT) RETURNS STRING
     CASE s
-    WHEN CONNECT_STATUS_UNDEFINED    RETURN "Undefined"
-    WHEN CONNECT_STATUS_CONNECTING   RETURN "Connecting"
-    WHEN CONNECT_STATUS_CONNECTED    RETURN "Connected"
-    WHEN CONNECT_STATUS_DISCONNECTED RETURN "Disconnected"
-    WHEN CONNECT_STATUS_CLOSED       RETURN "Closed"
-    WHEN CONNECT_STATUS_FAILED       RETURN "Failed"
+    WHEN BLE_CONNECT_STATUS_UNDEFINED    RETURN "Undefined"
+    WHEN BLE_CONNECT_STATUS_CONNECTING   RETURN "Connecting"
+    WHEN BLE_CONNECT_STATUS_CONNECTED    RETURN "Connected"
+    WHEN BLE_CONNECT_STATUS_DISCONNECTED RETURN "Disconnected"
+    WHEN BLE_CONNECT_STATUS_CLOSED       RETURN "Closed"
+    WHEN BLE_CONNECT_STATUS_FAILED       RETURN "Failed"
     OTHERWISE RETURN NULL
     END CASE
 END FUNCTION
@@ -1186,12 +1186,12 @@ END FUNCTION
 #+ @return TRUE if connection is possible, otherwise FALSE.
 PUBLIC FUNCTION canConnect(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    IF initStatus!=INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
+    IF initStatus!=BLE_INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
-        RETURN (connStatus[address] == CONNECT_STATUS_FAILED
-             OR connStatus[address] == CONNECT_STATUS_CLOSED
-             OR connStatus[address] == CONNECT_STATUS_DISCONNECTED)
+        RETURN (connStatus[address] == BLE_CONNECT_STATUS_FAILED
+             OR connStatus[address] == BLE_CONNECT_STATUS_CLOSED
+             OR connStatus[address] == BLE_CONNECT_STATUS_DISCONNECTED)
     ELSE
         RETURN TRUE
     END IF
@@ -1232,16 +1232,16 @@ END FUNCTION
 #+ @return TRUE if close is possible, otherwise FALSE.
 PUBLIC FUNCTION canClose(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    IF initStatus!=INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
+    IF initStatus!=BLE_INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
         -- Next statuses are valid to close for cleanup and connect again.
-        IF (connStatus[address] == CONNECT_STATUS_CONNECTING
-         OR connStatus[address] == CONNECT_STATUS_FAILED
-         OR connStatus[address] == CONNECT_STATUS_DISCONNECTED) THEN
+        IF (connStatus[address] == BLE_CONNECT_STATUS_CONNECTING
+         OR connStatus[address] == BLE_CONNECT_STATUS_FAILED
+         OR connStatus[address] == BLE_CONNECT_STATUS_DISCONNECTED) THEN
             RETURN TRUE
         END IF
-        IF connStatus[address] == CONNECT_STATUS_CONNECTED THEN
+        IF connStatus[address] == BLE_CONNECT_STATUS_CONNECTED THEN
             RETURN (NOT hasActiveSubscriptions(address))
         END IF
     END IF
@@ -1263,7 +1263,7 @@ PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALL
         CALL _fatalError("Invalid JSON string for discover result.")
     END TRY
     IF ro.get("status") == "discovered" THEN
-        LET discResultDict[address].status = DISCOVER_STATUS_DISCOVERED
+        LET discResultDict[address].status = BLE_DISCOVER_STATUS_DISCOVERED
         LET discResultDict[address].address = ro.get("address")
         LET discResultDict[address].name = ro.get("name")
         LET sa = ro.get("services") -- Services array
@@ -1279,7 +1279,7 @@ PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALL
                         IF co IS NOT NULL THEN
                             LET c_uuid = co.get("uuid")
                             LET sk = _subsKey(address,s_uuid,c_uuid)
-                            LET subsStatus[sk] = SUBSCRIBE_STATUS_READY
+                            LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_READY
                             LET discResultDict[address].services[s_uuid].characteristics[c_uuid].uuid = c_uuid
                             LET po = co.get("properties")
                             IF po IS NOT NULL THEN
@@ -1338,7 +1338,7 @@ PRIVATE FUNCTION _saveDiscoveryData(address STRING, result STRING) RETURNS SMALL
         END IF
 --display "discovery result = ", util.JSON.format( util.JSON.stringify( discResultDict[address] ) )
     ELSE
-        LET discResultDict[address].status = DISCOVER_STATUS_FAILED
+        LET discResultDict[address].status = BLE_DISCOVER_STATUS_FAILED
         RETURN -3
     END IF
     RETURN 0
@@ -1399,10 +1399,10 @@ END FUNCTION
 #+ @return TRUE if discovery is possible, otherwise FALSE.
 PUBLIC FUNCTION canDiscover(address STRING) RETURNS BOOLEAN
     CALL _check_lib_state(0)
-    IF initStatus!=INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
+    IF initStatus!=BLE_INIT_STATUS_INITIALIZED THEN RETURN FALSE END IF
     IF address IS NULL THEN RETURN FALSE END IF
     IF connStatus.contains(address) THEN
-        RETURN (connStatus[address] == CONNECT_STATUS_CONNECTED)
+        RETURN (connStatus[address] == BLE_CONNECT_STATUS_CONNECTED)
     ELSE
         RETURN FALSE
     END IF
@@ -1424,7 +1424,7 @@ PUBLIC FUNCTION getDiscoveryStatus(address STRING) RETURNS SMALLINT
     IF discResultDict.contains(address) THEN
         RETURN discResultDict[address].status
     END IF
-    RETURN DISCOVER_STATUS_UNDEFINED
+    RETURN BLE_DISCOVER_STATUS_UNDEFINED
 END FUNCTION
 
 #+ Provides a display text corresponding to the discovery status.
@@ -1434,9 +1434,9 @@ END FUNCTION
 #+ @return the discovery status as text.
 PUBLIC FUNCTION discoveryStatusToString(s SMALLINT) RETURNS STRING
     CASE s
-    WHEN DISCOVER_STATUS_UNDEFINED  RETURN "Undefined"
-    WHEN DISCOVER_STATUS_DISCOVERED RETURN "Discovered"
-    WHEN DISCOVER_STATUS_FAILED     RETURN "Failed"
+    WHEN BLE_DISCOVER_STATUS_UNDEFINED  RETURN "Undefined"
+    WHEN BLE_DISCOVER_STATUS_DISCOVERED RETURN "Discovered"
+    WHEN BLE_DISCOVER_STATUS_FAILED     RETURN "Failed"
     OTHERWISE RETURN NULL
     END CASE
 END FUNCTION
@@ -1492,9 +1492,9 @@ PUBLIC FUNCTION canSubscribe(address STRING, service STRING, characteristic STRI
     LET sk = _subsKey(address, service, characteristic)
     IF sk IS NULL THEN RETURN FALSE END IF
     IF subsStatus.contains(sk) THEN
-        IF NOT ( subsStatus[sk] == SUBSCRIBE_STATUS_READY
-              OR subsStatus[sk] == SUBSCRIBE_STATUS_UNSUBSCRIBED
-              OR subsStatus[sk] == SUBSCRIBE_STATUS_FAILED ) THEN
+        IF NOT ( subsStatus[sk] == BLE_SUBSCRIBE_STATUS_READY
+              OR subsStatus[sk] == BLE_SUBSCRIBE_STATUS_UNSUBSCRIBED
+              OR subsStatus[sk] == BLE_SUBSCRIBE_STATUS_FAILED ) THEN
            RETURN FALSE
         END IF
         -- Make sure that the characteristic properties allow subscription
@@ -1520,11 +1520,11 @@ END FUNCTION
 #+
 #+ Check for available results with the getSubscriptionStatus() function:
 #+
-#+ - SUBSCRIBE_STATUS_SUBSCRIBING : Subscription is in progress.
+#+ - BLE_SUBSCRIBE_STATUS_SUBSCRIBING : Subscription is in progress.
 #+
-#+ - SUBSCRIBE_STATUS_SUBSCRIBED : Subscription is done.
+#+ - BLE_SUBSCRIBE_STATUS_SUBSCRIBED : Subscription is done.
 #+
-#+ - SUBSCRIBE_STATUS_RESULTS : Results are available with getSubscriptionResults()
+#+ - BLE_SUBSCRIBE_STATUS_RESULTS : Results are available with getSubscriptionResults()
 #+
 #+ @param address the address of a BLE device.
 #+ @param service the UUID of the GATT service.
@@ -1549,7 +1549,7 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
     TRY
         LET sk = _subsKey(address, service, characteristic)
 --display "subscribing : sk = ", sk
-        LET subsStatus[sk] = SUBSCRIBE_STATUS_SUBSCRIBING
+        LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_SUBSCRIBING
         LET lastSubsSK = sk
         CALL ui.Interface.frontCall("cordova", "callWithoutWaiting",
                 [BLUETOOTHLEPLUGIN, "subscribe", params],
@@ -1562,9 +1562,9 @@ PUBLIC FUNCTION subscribe(address STRING, service STRING, characteristic STRING)
 END FUNCTION
 
 PRIVATE FUNCTION _canUnsubSK(sk STRING)
-    RETURN ( subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBING
-          OR subsStatus[sk] == SUBSCRIBE_STATUS_SUBSCRIBED
-          OR subsStatus[sk] == SUBSCRIBE_STATUS_RESULTS )
+    RETURN ( subsStatus[sk] == BLE_SUBSCRIBE_STATUS_SUBSCRIBING
+          OR subsStatus[sk] == BLE_SUBSCRIBE_STATUS_SUBSCRIBED
+          OR subsStatus[sk] == BLE_SUBSCRIBE_STATUS_RESULTS )
 END FUNCTION
 
 #+ Indicates if it is possible to unsubscribe to a characteristic.
@@ -1618,9 +1618,9 @@ PUBLIC FUNCTION unsubscribe(address STRING, service STRING, characteristic STRIN
         LET lastSubsSK = sk
         LET jsonResult = util.jsonObject.parse(result)
         IF jsonResult.get("status") == "unsubscribed" THEN
-            LET subsStatus[sk] = SUBSCRIBE_STATUS_UNSUBSCRIBED
+            LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_UNSUBSCRIBED
         ELSE
-            LET subsStatus[sk] = SUBSCRIBE_STATUS_FAILED
+            LET subsStatus[sk] = BLE_SUBSCRIBE_STATUS_FAILED
         END IF
     CATCH
         CALL _debug_error()
@@ -1635,7 +1635,7 @@ END FUNCTION
 #+ @param service the UUID of the GATT service.
 #+ @param characteristic the UUID of the GATT characteristic.
 #+
-#+ @return SUBSCRIBE_STATUS_* values.
+#+ @return BLE_SUBSCRIBE_STATUS_* values.
 PUBLIC FUNCTION getSubscriptionStatus(address STRING, service STRING, characteristic STRING) RETURNS SMALLINT
     DEFINE sk STRING
     LET sk = _subsKey(address, service, characteristic)
@@ -1644,7 +1644,7 @@ PUBLIC FUNCTION getSubscriptionStatus(address STRING, service STRING, characteri
             RETURN subsStatus[sk]
         END IF
     END IF
-    RETURN SUBSCRIBE_STATUS_UNDEFINED
+    RETURN BLE_SUBSCRIBE_STATUS_UNDEFINED
 END FUNCTION
 
 #+ Provides a display text corresponding to the subscription status.
@@ -1654,13 +1654,13 @@ END FUNCTION
 #+ @return the subscription status as text.
 PUBLIC FUNCTION subscriptionStatusToString(s SMALLINT) RETURNS STRING
     CASE s
-    WHEN SUBSCRIBE_STATUS_UNDEFINED    RETURN "Undefined"
-    WHEN SUBSCRIBE_STATUS_READY        RETURN "Ready"
-    WHEN SUBSCRIBE_STATUS_SUBSCRIBING  RETURN "Subscribing"
-    WHEN SUBSCRIBE_STATUS_SUBSCRIBED   RETURN "Subscribed"
-    WHEN SUBSCRIBE_STATUS_UNSUBSCRIBED RETURN "Unsubscribed"
-    WHEN SUBSCRIBE_STATUS_FAILED       RETURN "Failed"
-    WHEN SUBSCRIBE_STATUS_RESULTS      RETURN "Results"
+    WHEN BLE_SUBSCRIBE_STATUS_UNDEFINED    RETURN "Undefined"
+    WHEN BLE_SUBSCRIBE_STATUS_READY        RETURN "Ready"
+    WHEN BLE_SUBSCRIBE_STATUS_SUBSCRIBING  RETURN "Subscribing"
+    WHEN BLE_SUBSCRIBE_STATUS_SUBSCRIBED   RETURN "Subscribed"
+    WHEN BLE_SUBSCRIBE_STATUS_UNSUBSCRIBED RETURN "Unsubscribed"
+    WHEN BLE_SUBSCRIBE_STATUS_FAILED       RETURN "Failed"
+    WHEN BLE_SUBSCRIBE_STATUS_RESULTS      RETURN "Results"
     OTHERWISE RETURN NULL
     END CASE
 END FUNCTION
@@ -1704,8 +1704,8 @@ END FUNCTION
 #+ @return TRUE the characteristic is available, otherwise FALSE.
 PUBLIC FUNCTION hasCharacteristic(address STRING, service STRING, characteristic STRING) RETURNS BOOLEAN
     IF connStatus.contains(address) THEN
-        IF connStatus[address] == CONNECT_STATUS_CONNECTED THEN
-            IF getDiscoveryStatus(address) == DISCOVER_STATUS_DISCOVERED THEN
+        IF connStatus[address] == BLE_CONNECT_STATUS_CONNECTED THEN
+            IF getDiscoveryStatus(address) == BLE_DISCOVER_STATUS_DISCOVERED THEN
                 IF discResultDict.contains(address) THEN
                     IF discResultDict[address].services.contains(service) THEN
                         RETURN discResultDict[address].services[service].characteristics.contains(characteristic)

@@ -65,7 +65,7 @@ MAIN
     ON ACTION initialize ATTRIBUTES(TEXT="Initialize")
        LET fglcdvBluetoothLE.initOptions.request=TRUE
        LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
-       LET m = fglcdvBluetoothLE.INIT_MODE_CENTRAL
+       LET m = fglcdvBluetoothLE.BLE_INIT_MODE_CENTRAL
        IF m != -1 THEN
           IF fglcdvBluetoothLE.initialize(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN
              MESSAGE "BluetoothLE initialization started."
@@ -93,10 +93,10 @@ MAIN
     ON ACTION startscan ATTRIBUTES(TEXT="Start Scan")
        INITIALIZE fglcdvBluetoothLE.scanOptions.* TO NULL
        IF fen == "GMA" THEN
-          LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.SCAN_MODE_LOW_POWER
-          LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.MATCH_MODE_AGRESSIVE
-          LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.MATCH_NUM_ONE_ADVERTISEMENT
-          LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.CALLBACK_TYPE_ALL_MATCHES
+          LET fglcdvBluetoothLE.scanOptions.scanMode = fglcdvBluetoothLE.BLE_SCAN_MODE_LOW_POWER
+          LET fglcdvBluetoothLE.scanOptions.matchMode = fglcdvBluetoothLE.BLE_MATCH_MODE_AGRESSIVE
+          LET fglcdvBluetoothLE.scanOptions.matchNum = fglcdvBluetoothLE.BLE_MATCH_NUM_ONE_ADVERTISEMENT
+          LET fglcdvBluetoothLE.scanOptions.callbackType = fglcdvBluetoothLE.BLE_CALLBACK_TYPE_ALL_MATCHES
        ELSE
           LET fglcdvBluetoothLE.scanOptions.allowDuplicates = FALSE
        END IF
@@ -132,18 +132,18 @@ MAIN
        LET cs[2] = fglcdvBluetoothLE.getConnectStatus(inforec.address)
        IF cs[2] != cs[1] THEN -- Something happened with connection...
           CASE cs[2]
-          WHEN CONNECT_STATUS_FAILED
+          WHEN BLE_CONNECT_STATUS_FAILED
              IF mbox_yn("Connection", SFMT("BLE Connection to: \n%1\n has failed.\nDo you want to close the connection?",inforec.address)) THEN
                 LET s = fglcdvBluetoothLE.close(inforec.address)
              END IF
-          WHEN CONNECT_STATUS_CONNECTED
+          WHEN BLE_CONNECT_STATUS_CONNECTED
              MESSAGE SFMT("Connected to %1", inforec.address)
           END CASE
        END IF
        -- Subscription status changes
        LET us[2] = fglcdvBluetoothLE.getSubscriptionStatus(inforec.address,inforec.service,inforec.characteristic)
        IF us[2] != us[1] THEN -- Something happened with subscription...
-          IF us[2] != SUBSCRIBE_STATUS_FAILED THEN
+          IF us[2] != BLE_SUBSCRIBE_STATUS_FAILED THEN
              MESSAGE SFMT("Subscription status: %1", fglcdvBluetoothLE.subscriptionStatusToString(us[2]))
           END IF
        END IF
@@ -342,15 +342,15 @@ PRIVATE FUNCTION show_device_info(address STRING)
     DEFINE discres fglcdvBluetoothLE.DiscoverDictionaryT
     CALL fglcdvBluetoothLE.getDiscoveryResults(discres)
     LET info = SFMT("Device: %1 (%2)\n", discres[address].name, address),
-               SFMT("    System ID: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_SYSTEM_ID)),
-               SFMT("    Model num: %1\n",         my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_MODEL_NUMBER_STRING)),
-               SFMT("    Serial num: %1\n",        my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_SERIAL_NUMBER_STRING)),
-               SFMT("    Firmware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_FIRMWARE_VERSION_STRING)),
-               SFMT("    Hardware version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_HARDWARE_VERSION_STRING)),
-               SFMT("    Software version: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_SOFTWARE_VERSION_STRING)),
-               SFMT("    Manufacturer: %1\n",      my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_MANUFACTURER_NAME_STRING)),
-               SFMT("    IEEE 11073 20601: %1\n",  my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_IEEE_11073_20601_RCDL)),
-               SFMT("    PnP ID: %1\n",            my_read(discres,address,SERVICE_DEVICE_INFORMATION,CHARACTERISTIC_PNP_ID))
+               SFMT("    System ID: %1\n",         my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_SYSTEM_ID)),
+               SFMT("    Model num: %1\n",         my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_MODEL_NUMBER_STRING)),
+               SFMT("    Serial num: %1\n",        my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_SERIAL_NUMBER_STRING)),
+               SFMT("    Firmware version: %1\n",  my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_FIRMWARE_VERSION_STRING)),
+               SFMT("    Hardware version: %1\n",  my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_HARDWARE_VERSION_STRING)),
+               SFMT("    Software version: %1\n",  my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_SOFTWARE_VERSION_STRING)),
+               SFMT("    Manufacturer: %1\n",      my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_MANUFACTURER_NAME_STRING)),
+               SFMT("    IEEE 11073 20601: %1\n",  my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_IEEE_11073_20601_RCDL)),
+               SFMT("    PnP ID: %1\n",            my_read(discres,address,BLE_SERVICE_DEVICE_INFORMATION,BLE_CHARACTERISTIC_PNP_ID))
 --display "device info: ", info
     CALL mbox_ok("Device info", info)
 END FUNCTION
@@ -435,7 +435,7 @@ PRIVATE FUNCTION setup_dialog(d ui.Dialog)
     DEFINE discovered BOOLEAN
     DEFINE cp fglcdvBluetoothLE.CharacteristicPropertiesT
     LET discovered = fglcdvBluetoothLE.getDiscoveryStatus(inforec.address)
-                        == fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED
+                        == fglcdvBluetoothLE.BLE_DISCOVER_STATUS_DISCOVERED
     CALL d.setActionActive("initialize", fglcdvBluetoothLE.canInitialize())
     CALL d.setActionActive("startscan", fglcdvBluetoothLE.canStartScan())
     CALL d.setActionActive("stopscan", fglcdvBluetoothLE.canStopScan())
@@ -650,7 +650,7 @@ PRIVATE FUNCTION fillServiceCombobox(address STRING)
   LET inforec.descriptor = NULL
   CALL descCombobox.clear()
   IF fglcdvBluetoothLE.getDiscoveryStatus(address)
-        != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
+        != fglcdvBluetoothLE.BLE_DISCOVER_STATUS_DISCOVERED THEN
      RETURN
   END IF
   CALL fglcdvBluetoothLE.getDiscoveryResults(resdic)
@@ -672,7 +672,7 @@ PRIVATE FUNCTION fillCharacteristicCombobox(address STRING, service STRING)
   LET inforec.descriptor = NULL
   CALL descCombobox.clear()
   IF fglcdvBluetoothLE.getDiscoveryStatus(address)
-        != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
+        != fglcdvBluetoothLE.BLE_DISCOVER_STATUS_DISCOVERED THEN
      RETURN
   END IF
   CALL fglcdvBluetoothLE.getDiscoveryResults(resdic)
@@ -694,7 +694,7 @@ PRIVATE FUNCTION fillDescriptorCombobox(address STRING, service STRING, characte
   LET inforec.descriptor = NULL
   CALL descCombobox.clear()
   IF fglcdvBluetoothLE.getDiscoveryStatus(address)
-        != fglcdvBluetoothLE.DISCOVER_STATUS_DISCOVERED THEN
+        != fglcdvBluetoothLE.BLE_DISCOVER_STATUS_DISCOVERED THEN
      RETURN
   END IF
   CALL fglcdvBluetoothLE.getDiscoveryResults(resdic)
