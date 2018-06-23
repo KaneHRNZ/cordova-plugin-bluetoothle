@@ -35,7 +35,7 @@ MAIN
 
     LET fen = getFrontEndName()
 
-    CALL fglcdvBluetoothLE.init()
+    CALL fglcdvBluetoothLE.initialize()
 
     OPEN FORM f1 FROM "main"
     DISPLAY FORM f1
@@ -67,7 +67,7 @@ MAIN
        LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
        LET m = fglcdvBluetoothLE.BLE_INIT_MODE_CENTRAL
        IF m != -1 THEN
-          IF fglcdvBluetoothLE.initialize(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN
+          IF fglcdvBluetoothLE.initializeBluetoothLE(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN
              MESSAGE "BluetoothLE initialization started."
           ELSE
              ERROR "BluetoothLE initialization start has failed."
@@ -278,7 +278,7 @@ MAIN
 
     END INPUT
 
-    CALL fglcdvBluetoothLE.fini()
+    CALL fglcdvBluetoothLE.finalize()
 
 END MAIN
 

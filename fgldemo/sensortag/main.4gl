@@ -35,9 +35,9 @@ DEFINE rec RECORD
 
 MAIN
   LET fen = getFrontEndName()
-  CALL fglcdvBluetoothLE.init()
+  CALL fglcdvBluetoothLE.initialize()
   CALL main_form()
-  CALL fglcdvBluetoothLE.fini()
+  CALL fglcdvBluetoothLE.finalize()
 END MAIN
 
 PRIVATE FUNCTION main_form()
@@ -65,7 +65,7 @@ LABEL _next_step_:
                 LET rec.state = "init-done"
                 GOTO _next_step_
              ELSE
-                IF fglcdvBluetoothLE.initialize(fglcdvBluetoothLE.BLE_INIT_MODE_CENTRAL, fglcdvBluetoothLE.initOptions.*) < 0 THEN
+                IF fglcdvBluetoothLE.initializeBluetoothLE(fglcdvBluetoothLE.BLE_INIT_MODE_CENTRAL, fglcdvBluetoothLE.initOptions.*) < 0 THEN
                    ERROR "Initialization failed."
                    EXIT INPUT
                 END IF

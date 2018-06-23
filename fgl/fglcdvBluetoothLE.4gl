@@ -244,9 +244,9 @@ PRIVATE DEFINE subsResultsOffset INTEGER
 
 #+ Initializes the plugin library
 #+
-#+ The init() function must be called prior to other calls.
+#+ The initialize() function must be called prior to other calls.
 #+
-PUBLIC FUNCTION init()
+PUBLIC FUNCTION initialize()
 
     IF initialized THEN -- exclusive library usage
         CALL _fatalError("The library is already in use.")
@@ -275,9 +275,9 @@ END FUNCTION
 
 #+ Finalizes the plugin library
 #+
-#+ The fini() function should be called when the library is no longer used.
+#+ The finalize() function should be called when the library is no longer used.
 #+
-PUBLIC FUNCTION fini()
+PUBLIC FUNCTION finalize()
     IF initialized THEN
         CALL _cleanup()
         CALL scanOptions.services.clear()
@@ -633,7 +633,7 @@ END FUNCTION
 #+ @param initOptions the initialization options of (see InitOptionsT)
 #+
 #+ @return 0 on success, <0 if error.
-PUBLIC FUNCTION initialize(initMode SMALLINT, initOptions InitOptionsT) RETURNS INTEGER
+PUBLIC FUNCTION initializeBluetoothLE(initMode SMALLINT, initOptions InitOptionsT) RETURNS INTEGER
     CALL _check_lib_state(0)
     CALL clearCallbackBuffer()
     CALL clearScanResultBuffer()

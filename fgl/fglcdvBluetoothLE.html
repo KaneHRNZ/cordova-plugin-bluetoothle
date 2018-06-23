@@ -350,7 +350,7 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#fini">fini</a></b>()<br> Finalizes the plugin library</td>
+<b><a href="#finalize">finalize</a></b>()<br> Finalizes the plugin library</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -450,17 +450,17 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#init">init</a></b>()<br> Initializes the plugin library</td>
-</tr>
-<tr>
-<td class="summary-text"></td>
-<td class="summary-text">
 <b><a href="#initializationStatusToString">initializationStatusToString</a></b>(s SMALLINT) RETURNS STRING<br> Provides a display text corresponding to the initialization status.</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#initialize">initialize</a></b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER<br> Initializes BLE</td>
+<b><a href="#initialize">initialize</a></b>()<br> Initializes the plugin library</td>
+</tr>
+<tr>
+<td class="summary-text"></td>
+<td class="summary-text">
+<b><a href="#initializeBluetoothLE">initializeBluetoothLE</a></b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER<br> Initializes BLE</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -1352,11 +1352,11 @@
 </dl></dd>
 </dl>
 <hr>
-<a id="fini"> </a><h3>fini</h3>
-<tt>FUNCTION <b>fini</b>()</tt><dl>
+<a id="finalize"> </a><h3>finalize</h3>
+<tt>FUNCTION <b>finalize</b>()</tt><dl>
 <dd>
 <p> Finalizes the plugin library</p>
-<p> The fini() function should be called when the library is no longer used.</p>
+<p> The finalize() function should be called when the library is no longer used.</p>
 </dd>
 <dd><dl></dl></dd>
 </dl>
@@ -1600,15 +1600,6 @@
 </dl></dd>
 </dl>
 <hr>
-<a id="init"> </a><h3>init</h3>
-<tt>FUNCTION <b>init</b>()</tt><dl>
-<dd>
-<p> Initializes the plugin library</p>
-<p> The init() function must be called prior to other calls.</p>
-</dd>
-<dd><dl></dl></dd>
-</dl>
-<hr>
 <a id="initializationStatusToString"> </a><h3>initializationStatusToString</h3>
 <tt>FUNCTION <b>initializationStatusToString</b>(s SMALLINT) RETURNS STRING</tt><dl>
 <dd><p> Provides a display text corresponding to the initialization status.</p></dd>
@@ -1624,7 +1615,16 @@
 </dl>
 <hr>
 <a id="initialize"> </a><h3>initialize</h3>
-<tt>FUNCTION <b>initialize</b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER</tt><dl>
+<tt>FUNCTION <b>initialize</b>()</tt><dl>
+<dd>
+<p> Initializes the plugin library</p>
+<p> The initialize() function must be called prior to other calls.</p>
+</dd>
+<dd><dl></dl></dd>
+</dl>
+<hr>
+<a id="initializeBluetoothLE"> </a><h3>initializeBluetoothLE</h3>
+<tt>FUNCTION <b>initializeBluetoothLE</b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER</tt><dl>
 <dd><p> Initializes BLE</p></dd>
 <dd><dl>
 <dt><b>Parameters:</b></dt>
