@@ -460,7 +460,7 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#initializeBluetoothLE">initializeBluetoothLE</a></b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER<br> Initializes BLE</td>
+<b><a href="#initializeBluetoothLE">initializeBluetoothLE</a></b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS SMALLINT<br> Initializes BLE</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -500,12 +500,12 @@
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#startScan">startScan</a></b>(scanOptions <a href="#ScanOptionsT">ScanOptionsT</a>) RETURNS INTEGER<br> Starts BLE scanning</td>
+<b><a href="#startScan">startScan</a></b>(scanOptions <a href="#ScanOptionsT">ScanOptionsT</a>) RETURNS SMALLINT<br> Starts BLE scanning</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
 <td class="summary-text">
-<b><a href="#stopScan">stopScan</a></b>() RETURNS INTEGER<br> Stops BLE scanning</td>
+<b><a href="#stopScan">stopScan</a></b>() RETURNS SMALLINT<br> Stops BLE scanning</td>
 </tr>
 <tr>
 <td class="summary-text"></td>
@@ -1624,7 +1624,7 @@
 </dl>
 <hr>
 <a id="initializeBluetoothLE"> </a><h3>initializeBluetoothLE</h3>
-<tt>FUNCTION <b>initializeBluetoothLE</b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS INTEGER</tt><dl>
+<tt>FUNCTION <b>initializeBluetoothLE</b>(initMode SMALLINT, initOptions <a href="#InitOptionsT">InitOptionsT</a>) RETURNS SMALLINT</tt><dl>
 <dd><p> Initializes BLE</p></dd>
 <dd><dl>
 <dt><b>Parameters:</b></dt>
@@ -1749,7 +1749,7 @@
 </dl>
 <hr>
 <a id="startScan"> </a><h3>startScan</h3>
-<tt>FUNCTION <b>startScan</b>(scanOptions <a href="#ScanOptionsT">ScanOptionsT</a>) RETURNS INTEGER</tt><dl>
+<tt>FUNCTION <b>startScan</b>(scanOptions <a href="#ScanOptionsT">ScanOptionsT</a>) RETURNS SMALLINT</tt><dl>
 <dd>
 <p> Starts BLE scanning</p>
 <p> When initialization is done, it is possible to scan for BLE devices.</p>
@@ -1793,7 +1793,7 @@
 </dl>
 <hr>
 <a id="stopScan"> </a><h3>stopScan</h3>
-<tt>FUNCTION <b>stopScan</b>() RETURNS INTEGER</tt><dl>
+<tt>FUNCTION <b>stopScan</b>() RETURNS SMALLINT</tt><dl>
 <dd>
 <p> Stops BLE scanning</p>
 <p> After retrieving scan results from startScan(), stop scanning with stopScan().</p>

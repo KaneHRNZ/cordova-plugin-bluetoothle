@@ -633,7 +633,7 @@ END FUNCTION
 #+ @param initOptions the initialization options of (see InitOptionsT)
 #+
 #+ @return 0 on success, <0 if error.
-PUBLIC FUNCTION initializeBluetoothLE(initMode SMALLINT, initOptions InitOptionsT) RETURNS INTEGER
+PUBLIC FUNCTION initializeBluetoothLE(initMode SMALLINT, initOptions InitOptionsT) RETURNS SMALLINT
     CALL _check_lib_state(0)
     CALL clearCallbackBuffer()
     CALL clearScanResultBuffer()
@@ -875,7 +875,7 @@ END FUNCTION
 #+ @param scanOptions a record of type ScanOptionsT to provide scan options.
 #+
 #+ @return <0 in case of error, 0 if ok.
-PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
+PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS SMALLINT
     DEFINE r SMALLINT
     CALL _check_lib_state(1)
     IF NOT canStartScan() THEN
@@ -910,7 +910,7 @@ PUBLIC FUNCTION startScan( scanOptions ScanOptionsT ) RETURNS INTEGER
     RETURN 0
 END FUNCTION
 
-PRIVATE FUNCTION _stopScan(errors BOOLEAN) RETURNS INTEGER
+PRIVATE FUNCTION _stopScan(errors BOOLEAN) RETURNS SMALLINT
     DEFINE result STRING
     DEFINE jsonResult util.JSONObject
     TRY
@@ -939,7 +939,7 @@ END FUNCTION
 #+ This call is synchronous (result does not need to be handled with cordovacallback action)
 #+
 #+ @return BLE_SCAN_STATUS_STOPPED or BLE_SCAN_STATUS_FAILED.
-PUBLIC FUNCTION stopScan() RETURNS INTEGER
+PUBLIC FUNCTION stopScan() RETURNS SMALLINT
     CALL _check_lib_state(1)
     IF NOT canStopScan() THEN
         RETURN -1
