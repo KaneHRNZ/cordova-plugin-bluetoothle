@@ -28,6 +28,8 @@ DEFINE descCombobox ui.ComboBox
 
 DEFINE fen STRING
 
+CONSTANT APP_NAME = "myapp" #TODO replace with your app name e.g. com.fourjs.demo
+
 MAIN
     DEFINE tmp STRING,
            cnt, m, s INT,
@@ -64,7 +66,7 @@ MAIN
 
     ON ACTION initialize ATTRIBUTES(TEXT="Initialize")
        LET fglcdvBluetoothLE.initOptions.request=TRUE
-       LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
+       LET fglcdvBluetoothLE.initOptions.restoreKey=APP_NAME
        LET m = fglcdvBluetoothLE.BLE_INIT_MODE_CENTRAL
        IF m != -1 THEN
           IF fglcdvBluetoothLE.initializeBluetoothLE(m, fglcdvBluetoothLE.initOptions.*) >= 0 THEN

@@ -33,6 +33,8 @@ DEFINE rec RECORD
              tempcel STRING
        END RECORD
 
+CONSTANT APP_NAME = "myapp" #TODO replace with your app name e.g. com.fourjs.demo
+
 MAIN
   LET fen = getFrontEndName()
   CALL fglcdvBluetoothLE.initialize()
@@ -59,7 +61,7 @@ LABEL _next_step_:
           WHEN "ready"
              LET ts = NULL
              LET fglcdvBluetoothLE.initOptions.request=TRUE
-             LET fglcdvBluetoothLE.initOptions.restoreKey="myapp"
+             LET fglcdvBluetoothLE.initOptions.restoreKey=APP_NAME
              LET rec.state = "init-start"
              IF fglcdvBluetoothLE.getInitializationStatus()==BLE_INIT_STATUS_INITIALIZED THEN -- from previous test
                 LET rec.state = "init-done"
