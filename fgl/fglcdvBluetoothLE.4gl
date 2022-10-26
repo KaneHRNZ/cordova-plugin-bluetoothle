@@ -350,13 +350,17 @@ END FUNCTION
 # FIXME: See GMI-648, GMA-1094
 PRIVATE FUNCTION _extract_error_info()
     DEFINE msg STRING,
-           err util.JSONObject
+           err util.JSONObject,
+           json_str_start_index integer
     IF STATUS != -6333 THEN
         CALL _fatalError("Expecting error -6333.")
     END IF
     LET msg = err_get(STATUS)
 --display "*** front call err_get: ", msg
-    LET msg = msg.subString(msg.getIndexOf("Reason:",1)+7,msg.getLength())
+    --LET msg = msg.subString(msg.getIndexOf("Reason:",1)+7,msg.getLength())
+    let json_str_start_index = msg.getIndexOf("{",1)
+    LET msg = msg.subString(json_str_start_index, msg.getIndexOf("}",json_str_start_index))
+    
 --display "*** front call error reason: ", msg
     TRY
         LET err = util.JSONObject.parse(msg)
